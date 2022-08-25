@@ -1,0 +1,90 @@
+---
+import Base from "../layouts/Base.astro";
+import { Content as About } from "../components/About.md";
+---
+
+<Base title="dvjn">
+    <main>
+        <header>
+            <h2 class="caption">hi, this is</h2>
+            <h1>divya jain</h1>
+        </header>
+
+        <About />
+    </main>
+</Base>
+
+<style lang="scss">
+    main {
+        margin: auto;
+        padding: 2em;
+        max-width: 60ch;
+
+        header {
+            margin: 2em 0;
+
+            h2 {
+                font-weight: normal;
+                margin-bottom: 0;
+            }
+
+            h1 {
+                font-family: monospace;
+                margin-top: 0;
+                background: linear-gradient(
+                    60deg,
+                    var(--fiery-rose),
+                    var(--medium-purple),
+                    var(--fiery-rose),
+                    var(--medium-purple),
+                    var(--fiery-rose),
+                    var(--medium-purple),
+                    var(--fiery-rose),
+                    var(--medium-purple),
+                    var(--fiery-rose),
+                    var(--medium-purple)
+                );
+                background-size: 1000% 1000%;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                animation: gradient 120s ease infinite;
+            }
+        }
+
+        :global(h2) {
+            font-family: monospace;
+        }
+
+        :global(strong) {
+            & > :global(code) {
+                color: var(--black-coffee);
+            }
+        }
+
+        :global(a) {
+            color: var(--black-coffee);
+            transition: 200ms color;
+
+            &:hover,
+            &:active {
+                color: var(--fiery-rose);
+            }
+        }
+
+        :global(hr) {
+            margin: 2.5em 0;
+        }
+
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+    }
+</style>

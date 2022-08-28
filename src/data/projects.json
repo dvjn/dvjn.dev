@@ -1,0 +1,92 @@
+[
+    {
+        "name": "wakatime-charts",
+        "technologies": ["Docker", "NodeJS", "SVG"],
+        "url": "https://github.com/dvjn/wakatime-charts",
+        "description": "A github action that generates beautiful svg charts from wakatime stats."
+    },
+    {
+        "name": "CalcuPi",
+        "technologies": ["Web", "Rust", "Wasm", "CSS"],
+        "url": "https://github.com/dvjn/CalcuPi",
+        "description": "A monte carlo simulation in rust wasm that calculates pi."
+    },
+    {
+        "name": "importit",
+        "technologies": ["Library", "Python"],
+        "url": "https://github.com/dvjn/importit",
+        "description": "A python code import helper."
+    },
+    {
+        "name": "anu-js",
+        "technologies": ["Library", "Typescript"],
+        "url": "https://github.com/dvjn/anu-js",
+        "description": "A frontend javascript micro-framework."
+    },
+    {
+        "name": "dvOS",
+        "technologies": ["Rust"],
+        "url": "https://github.com/dvjn/dvOS",
+        "description": "An os from scratch in rust."
+    },
+    {
+        "name": "solve-rs",
+        "technologies": ["Cli", "Rust"],
+        "url": "https://github.com/dvjn/solve-rs",
+        "description": "A cli for solving basic math expressions."
+    },
+    {
+        "name": "localtunnel-manager",
+        "technologies": ["Web", "Svelte", "NodeJS", "Typescript"],
+        "url": "https://github.com/dvjn/localtunnel-manager",
+        "description": "A webapp for managing proxy tunnels."
+    },
+    {
+        "name": "termapps",
+        "technologies": ["Cli", "Bash"],
+        "url": "https://github.com/dvjn/termapps",
+        "description": "A set of utility terminal apps."
+    },
+    {
+        "name": "never-have-i-ever",
+        "technologies": ["Web", "ReactJS"],
+        "url": "https://github.com/dvjn/never-have-i-ever",
+        "description": "Never have I ever game."
+    },
+    {
+        "name": "never-have-i-ever-svelte",
+        "technologies": ["Web", "Svelte"],
+        "url": "https://github.com/dvjn/never-have-i-ever-svelte",
+        "description": "Never have i ever game, but in svelte."
+    },
+    {
+        "name": "dv_coreutils",
+        "technologies": ["Cli", "Rust"],
+        "url": "https://github.com/dvjn/dv_coreutils",
+        "description": "A failed attempt to write gnu coreutils in rust."
+    },
+    {
+        "name": "hook-it",
+        "technologies": ["Library", "React"],
+        "url": "https://github.com/dvjn/hook-it",
+        "description": "A failed attempt to write a react hooks library."
+    },
+    {
+        "name": "DigitGuesser",
+        "technologies": ["Web", "Python", "Tensorflow", "Javascript"],
+        "url": "https://github.com/dvjn/DigitGuesser",
+        "description": "A demonstration of handwritten digit recognition."
+    },
+    {
+        "name": "TicTacToe",
+        "technologies": ["Web", "Coffeescript", "Sass"],
+        "url": "https://github.com/dvjn/TicTacToe",
+        "description": "A game of Xs and Os."
+    },
+    {
+        "name": "algopack",
+        "technologies": ["Library", "Cython"],
+        "url": "https://github.com/dvjn/algopack",
+        "description": "A set of alogrithms written in cython."
+    }
+]

@@ -1,0 +1,21 @@
+---
+import projects from "@data/projects.json";
+
+import Base from "@layouts/Base.astro";
+import Navbar, { Pages } from "@components/Navbar.astro";
+import Header from "@components/Header.astro";
+import ProjectCard from "@components/ProjectCard.astro";
+import Grid from "@components/Grid.astro";
+---
+
+<Base title="Divya Jain - Developer, Creator, Learner">
+    <Navbar page={Pages.Projects} />
+    <Header withGradient>
+        <Fragment slot="title">Projects</Fragment>
+        <Fragment slot="subtitle">I am a serial project starter, so a lots of projects.</Fragment>
+    </Header>
+
+    <Grid>
+        {projects.map((project) => <ProjectCard fullCard project={project} />)}
+    </Grid>
+</Base>

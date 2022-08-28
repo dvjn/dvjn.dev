@@ -1,90 +1,36 @@
 ---
-import Base from "../layouts/Base.astro";
-import { Content as About } from "../components/About.md";
+import projects from "@data/projects.json";
+
+import Base from "@layouts/Base.astro";
+import Navbar, { Pages } from "@components/Navbar.astro";
+import Header from "@components/Header.astro";
+import ProjectCard from "@components/ProjectCard.astro";
+import ShowMore from "@components/ShowMore.astro";
+import Section from "@components/Section.astro";
+import Grid from "@components/Grid.astro";
 ---
 
-<Base title="dvjn">
-    <main>
-        <header>
-            <h2 class="caption">hi, this is</h2>
-            <h1>divya jain</h1>
-        </header>
+<Base title="Divya Jain - Developer, Creator, Learner">
+    <Navbar page={Pages.Home} />
+    <Header withGradient>
+        <Fragment slot="title">Divya Jain</Fragment>
+        <Fragment slot="subtitle">A <em>developer</em>, <em>creator</em>, and <em>lifelong learner</em>.</Fragment>
+        <p>
+            Love architecting solutions, writing code, and learning new technologies. Working on DevOps at Seclore.
+            Writing projects in Rust, Python and JS in free time.
+        </p>
+    </Header>
 
-        <About />
-    </main>
+    <Section>
+        <Fragment slot="title">Projects</Fragment>
+        <Grid>
+            {projects.slice(0, 4).map((project) => <ProjectCard project={project} />)}
+        </Grid>
+        <ShowMore url="/projects" />
+    </Section>
+
+    <Section>
+        <Fragment slot="title">Posts</Fragment>
+        Coming soon, hopefully :)
+    </Section>
 </Base>
-
-<style lang="scss">
-    main {
-        margin: auto;
-        padding: 2em;
-        max-width: 60ch;
-
-        header {
-            margin: 2em 0;
-
-            h2 {
-                font-weight: normal;
-                margin-bottom: 0;
-            }
-
-            h1 {
-                font-family: monospace;
-                margin-top: 0;
-                background: linear-gradient(
-                    60deg,
-                    var(--fiery-rose),
-                    var(--medium-purple),
-                    var(--fiery-rose),
-                    var(--medium-purple),
-                    var(--fiery-rose),
-                    var(--medium-purple),
-                    var(--fiery-rose),
-                    var(--medium-purple),
-                    var(--fiery-rose),
-                    var(--medium-purple)
-                );
-                background-size: 1000% 1000%;
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                animation: gradient 120s ease infinite;
-            }
-        }
-
-        :global(h2) {
-            font-family: monospace;
-        }
-
-        :global(strong) {
-            & > :global(code) {
-                color: var(--black-coffee);
-            }
-        }
-
-        :global(a) {
-            color: var(--black-coffee);
-            transition: 200ms color;
-
-            &:hover,
-            &:active {
-                color: var(--fiery-rose);
-            }
-        }
-
-        :global(hr) {
-            margin: 2.5em 0;
-        }
-
-        @keyframes gradient {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-    }
-</style>

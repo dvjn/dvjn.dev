@@ -1,0 +1,16 @@
+<div>
+    <slot />
+</div>
+
+<style lang="scss">
+    div {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 0 -0.5rem;
+        align-items: stretch;
+
+        & > :global(*) {
+            margin: 0.5rem;
+        }
+    }
+</style>

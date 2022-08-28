@@ -1,16 +1,17 @@
 {
-  "name": "dvjn",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
-  },
-  "devDependencies": {
-    "astro": "^1.0.3",
-    "sass": "^1.54.4"
-  }
+    "name": "dvjn",
+    "version": "0.2.0",
+    "private": true,
+    "scripts": {
+        "dev": "astro dev",
+        "start": "astro dev",
+        "build": "astro build",
+        "preview": "astro preview",
+        "astro": "astro"
+    },
+    "devDependencies": {
+        "astro": "^1.0.3",
+        "astro-icon": "^0.7.3",
+        "sass": "^1.54.4"
+    }
 }

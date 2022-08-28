@@ -1,0 +1,47 @@
+---
+import Card from "@components/Card.astro";
+
+export interface Project {
+    name: string;
+    description: string;
+    url: string;
+    technologies?: Array<string>;
+}
+
+export interface Props {
+    project: Project;
+    fullCard?: boolean;
+}
+
+const { project, fullCard = false } = Astro.props;
+---
+
+<Card href={project.url}>
+    <Fragment slot="title">{project.name}</Fragment>
+    {
+        fullCard && project.technologies && (
+            <div class="technologies">
+                {project.technologies?.map((technology) => (
+                    <span>{technology}</span>
+                ))}
+            </div>
+        )
+    }
+    {project.description}
+</Card>
+
+<style lang="scss">
+    .technologies {
+        display: flex;
+        font-size: 0.75rem;
+        margin: 0.5rem 0;
+
+        span {
+            display: inline-block;
+            padding: 0.15rem 0.25rem;
+            margin-right: 0.25rem;
+            border-radius: 0.25rem;
+            background-color: var(--raisin-black);
+        }
+    }
+</style>

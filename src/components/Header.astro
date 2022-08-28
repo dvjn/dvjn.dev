@@ -1,0 +1,61 @@
+---
+export interface Props {
+    withGradient?: boolean;
+}
+
+const { withGradient = false } = Astro.props;
+---
+
+<header>
+    <h1 class={withGradient ? "with-gradient" : ""}><slot name="title" /></h1>
+    <h3><slot name="subtitle" /></h3>
+    <slot />
+</header>
+
+<style lang="scss">
+    header {
+        margin-bottom: 4rem;
+
+        h1 {
+            margin: 0;
+            font-weight: 700;
+
+            &.with-gradient {
+                background: linear-gradient(
+                    60deg,
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent)
+                );
+                background-size: 1000% 1000%;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                animation: gradient-animation 120s ease infinite;
+            }
+        }
+
+        h3 {
+            margin: 0 0 2rem 0;
+            font-size: var(--text-base);
+        }
+    }
+
+    @keyframes gradient-animation {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+</style>

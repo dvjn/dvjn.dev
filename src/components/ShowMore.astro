@@ -1,0 +1,33 @@
+---
+import Icon from "astro-icon";
+
+export interface Props {
+    url: string;
+}
+
+const { url } = Astro.props;
+---
+
+<div>
+    <a href={url}><span>Show More</span><Icon name="radix:arrow-right" /></a>
+</div>
+
+<style lang="scss">
+    div {
+        margin-top: 0.5rem;
+        display: flex;
+        justify-content: flex-end;
+
+        a {
+            display: flex;
+            text-decoration: none;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        [astro-icon] {
+            height: 1.25em;
+            margin-left: 0.5rem;
+        }
+    }
+</style>

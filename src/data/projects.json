@@ -6,10 +6,10 @@
         "description": "A github action that generates beautiful svg charts from wakatime stats."
     },
     {
-        "name": "CalcuPi",
-        "technologies": ["Web", "Rust", "Wasm", "CSS"],
-        "url": "https://github.com/dvjn/CalcuPi",
-        "description": "A monte carlo simulation in rust wasm that calculates pi."
+        "name": "chip8-emulator",
+        "technologies": ["Web", "Rust", "Wasm", "Typescript"],
+        "url": "https://github.com/dvjn/chip8-emulator",
+        "description": "A web emulator for chip8 written in rust."
     },
     {
         "name": "importit",
@@ -22,6 +22,12 @@
         "technologies": ["Library", "Typescript"],
         "url": "https://github.com/dvjn/anu-js",
         "description": "A frontend javascript micro-framework."
+    },
+    {
+        "name": "CalcuPi",
+        "technologies": ["Web", "Rust", "Wasm", "CSS"],
+        "url": "https://github.com/dvjn/CalcuPi",
+        "description": "A monte carlo simulation in rust wasm that calculates pi."
     },
     {
         "name": "dvOS",

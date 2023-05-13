@@ -2,7 +2,7 @@
 export enum Pages {
     Home = "HOME",
     Projects = "PROJECTS",
-    Blog = "BLOG",
+    Posts = "POSTS",
 }
 
 export interface Props {
@@ -18,7 +18,7 @@ const { page } = Astro.props;
     <div class="left">
         <a href="/" class={page == Pages.Home ? "active" : ""}>Home</a>
         <a href="/projects" class={page == Pages.Projects ? "active" : ""}>Projects</a>
-        <a href="/blog" class={page == Pages.Blog ? "active" : ""}>Blog</a>
+        <a href="/posts" class={page == Pages.Posts ? "active" : ""}>Posts</a>
     </div>
 
     <div class="right">

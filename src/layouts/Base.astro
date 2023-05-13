@@ -40,7 +40,7 @@ const { title } = Astro.props as Props;
                 --black-pearl: hsla(200, 6%, 10%, 1);
                 --raisin-black: hsla(240, 7%, 19%, 1);
                 --black-coffee: hsl(266, 11%, 24%);
-                --topaz: hsl(267, 4%, 51%);
+                --topaz: hsla(272, 4%, 80%, 1);
 
                 --color-bg: var(--black-pearl);
                 --color-text: var(--topaz);
@@ -67,7 +67,8 @@ const { title } = Astro.props as Props;
             main {
                 margin: auto;
                 padding: 2em;
-                max-width: 75ch;
+                width: 100%;
+                max-width: 80ch;
             }
 
             h1 {
@@ -115,6 +116,26 @@ const { title } = Astro.props as Props;
                 &:active {
                     color: var(--primary-accent);
                 }
+            }
+
+            .with-gradient {
+                background: linear-gradient(
+                    60deg,
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent),
+                    var(--primary-accent),
+                    var(--secondary-accent)
+                );
+                background-size: 1000% 1000%;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                animation: gradient-animation 120s ease infinite;
             }
 
             .preload * {

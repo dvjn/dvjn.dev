@@ -6,7 +6,7 @@ export enum Pages {
 }
 
 export interface Props {
-    page: Pages;
+    page?: Pages;
 }
 
 import { Icon } from "astro-icon";
@@ -16,9 +16,9 @@ const { page } = Astro.props;
 
 <nav>
     <div class="left">
-        <a href="/" class={page == Pages.Home ? "active" : ""}>Home</a>
-        <a href="/projects" class={page == Pages.Projects ? "active" : ""}>Projects</a>
-        <a href="/posts" class={page == Pages.Posts ? "active" : ""}>Posts</a>
+        <a href="/" class:list={[{ active: page == Pages.Home }]}>Home</a>
+        <a href="/projects" class:list={[{ active: page == Pages.Projects }]}>Projects</a>
+        <a href="/posts" class:list={[{ active: page == Pages.Posts }]}>Posts</a>
     </div>
 
     <div class="right">
@@ -68,6 +68,7 @@ const { page } = Astro.props;
                 &.icon {
                     padding: 0.625rem;
                 }
+
                 [astro-icon] {
                     height: 1.25rem;
                     width: 1.25rem;

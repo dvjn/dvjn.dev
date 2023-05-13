@@ -9,8 +9,8 @@ const { title, content, href } = Astro.props;
 ---
 
 <a href={href}>
-    <h2 set:html={title}></h2>
-    <p set:html={content}></p>
+    <h2 set:html={title} />
+    <p set:html={content} />
 </a>
 
 <style lang="scss">

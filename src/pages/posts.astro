@@ -1,14 +1,14 @@
 ---
-import Base from "@layouts/Base.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
 import Navbar, { Pages } from "@components/Navbar.astro";
 import Header from "@components/Header.astro";
 ---
 
-<Base title="Divya Jain - Developer, Creator, Learner">
+<BaseLayout title="Divya Jain - Developer, Creator, Learner">
     <Navbar page={Pages.Posts} />
     <Header withGradient>
         <Fragment slot="title">Posts</Fragment>
         <Fragment slot="subtitle">Some things that I wrote.</Fragment>
     </Header>
     <p>Wow, such empty</p>
-</Base>
+</BaseLayout>

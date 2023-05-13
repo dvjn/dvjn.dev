@@ -1,14 +1,14 @@
 ---
 import projects from "@data/projects.json";
 
-import Base from "@layouts/Base.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
 import Navbar, { Pages } from "@components/Navbar.astro";
 import Header from "@components/Header.astro";
 import ProjectCard from "@components/ProjectCard.astro";
 import Grid from "@components/Grid.astro";
 ---
 
-<Base title="Divya Jain - Developer, Creator, Learner">
+<BaseLayout title="Divya Jain - Developer, Creator, Learner">
     <Navbar page={Pages.Projects} />
     <Header withGradient>
         <Fragment slot="title">Projects</Fragment>
@@ -18,4 +18,4 @@ import Grid from "@components/Grid.astro";
     <Grid>
         {projects.map((project) => <ProjectCard fullCard project={project} />)}
     </Grid>
-</Base>
+</BaseLayout>

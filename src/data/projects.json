@@ -1,5 +1,17 @@
 [
     {
+        "name": "woodpecker-docker-tags-plugin",
+        "technologies": ["Woodpecker CI", "Bash", "Docker"],
+        "url": "https://github.com/dvjn/woodpecker-docker-tags-plugin",
+        "description": "Woodpecker CI plugin to autogenerate tags file based on CI events."
+    },
+    {
+        "name": "woodpecker-is-it-up-yet-plugin",
+        "technologies": ["Woodpecker CI", "Bash", "Docker"],
+        "url": "https://github.com/dvjn/woodpecker-is-it-up-yet-plugin",
+        "description": "Woodpecker CI plugin to wait for a service to start."
+    },
+    {
         "name": "wakatime-charts",
         "technologies": ["Docker", "NodeJS", "SVG"],
         "url": "https://github.com/dvjn/wakatime-charts",

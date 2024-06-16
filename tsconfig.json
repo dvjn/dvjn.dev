@@ -7,7 +7,8 @@
         "isolatedModules": true,
         "noEmit": true,
         "strict": true,
-        "importsNotUsedAsValues": "error",
+        "verbatimModuleSyntax": true,
+        "allowSyntheticDefaultImports": true,
         "baseUrl": ".",
         "paths": {
             "@components/*": ["src/components/*"],

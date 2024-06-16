@@ -1,5 +1,5 @@
 ---
-import Icon from "astro-icon";
+import { Icon } from "astro-icon/components";
 
 export interface Props {
     url: string;
@@ -9,7 +9,7 @@ const { url } = Astro.props;
 ---
 
 <div>
-    <a href={url}><span>Show More</span><Icon name="radix:arrow-right" /></a>
+    <a href={url}><span>Show More</span><Icon name="radix-icons:arrow-right" /></a>
 </div>
 
 <style lang="scss">

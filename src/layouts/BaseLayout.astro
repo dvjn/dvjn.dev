@@ -138,6 +138,18 @@ const { title } = Astro.props as Props;
                 animation: gradient-animation 120s ease infinite;
             }
 
+            @keyframes gradient-animation {
+                0% {
+                    background-position: 0% 50%;
+                }
+                50% {
+                    background-position: 100% 50%;
+                }
+                100% {
+                    background-position: 0% 50%;
+                }
+            }
+
             .preload * {
                 -webkit-transition: none !important;
                 -moz-transition: none !important;

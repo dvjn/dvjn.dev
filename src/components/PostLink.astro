@@ -1,0 +1,60 @@
+---
+export interface Post {
+    title: string;
+    preview: string;
+    url: string;
+    published_on: string;
+    tags?: Array<string>;
+}
+
+export interface Props {
+    post: Post;
+}
+
+const { post } = Astro.props;
+
+import * as date from "date-fns";
+---
+
+<div>
+    <div class="title">
+        <a href={post.url}>{post.title}</a>
+    </div>
+    <div class="tags">
+        <span>{date.format(date.parse(post.published_on, "dd/MM/yyyy", new Date()), "MMM do, yyyy")}</span>
+        {post.tags?.map((tag) => <span>{tag}</span>)}
+    </div>
+</div>
+
+<style lang="scss">
+    .title {
+        a {
+            font-size: 1.25rem;
+            font-weight: bold;
+            text-decoration: none;
+
+            &:hover,
+            &:active {
+                color: var(--secondary-accent);
+            }
+        }
+
+        span {
+            opacity: 0.5;
+        }
+    }
+
+    .tags {
+        display: flex;
+        font-size: 0.75rem;
+        margin: 0.5rem 0;
+
+        span {
+            display: inline-block;
+            padding: 0.15rem 0.25rem;
+            margin-right: 0.25rem;
+            border-radius: 0.25rem;
+            background-color: var(--raisin-black);
+        }
+    }
+</style>

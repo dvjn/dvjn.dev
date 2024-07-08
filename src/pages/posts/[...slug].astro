@@ -1,0 +1,64 @@
+---
+import { type CollectionEntry, getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+    const postEntries = await getCollection("posts");
+    return postEntries.map((entry) => ({
+        params: { slug: entry.slug },
+        props: { ...entry },
+    }));
+}
+
+import * as date from "date-fns";
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Navbar, { Pages } from "@components/Navbar.astro";
+import Header from "@components/Header.astro";
+import { Image } from "astro:assets";
+
+export type Props = CollectionEntry<"posts">;
+
+const { render, data } = Astro.props;
+const { Content } = await render();
+---
+
+<BaseLayout title={`${data.title} | Divya Jain`}>
+    <Navbar page={Pages.Posts} />
+    <Header withGradient>
+        <Fragment slot="title">{data.title}</Fragment>
+        <Fragment slot="subtitle">
+            <div>
+                <span style="opacity: 0.5">{"Published on "}</span>{
+                    date.format(date.parse(data.published_on, "dd/MM/yyyy", new Date()), "MMM do, yyyy")
+                }
+            </div>
+        </Fragment>
+    </Header>
+    {
+        data.cover && (
+            <figure>
+                <Image src={data.cover} alt="hero" />
+                {data.cover_caption && <figcaption>{data.cover_caption}</figcaption>}
+            </figure>
+        )
+    }
+    <Content />
+</BaseLayout>
+
+<style lang="scss">
+    figure {
+        margin: -2rem 0 2rem 0;
+
+        img {
+            height: 100%;
+            width: 100%;
+            border-radius: 1rem;
+        }
+
+        figcaption {
+            opacity: 0.75;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+    }
+</style>

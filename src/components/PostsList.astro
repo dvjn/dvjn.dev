@@ -1,0 +1,35 @@
+---
+import { getCollection } from "astro:content";
+
+import PostLink from "@components/PostLink.astro";
+
+const posts = await getCollection("posts");
+---
+
+<div class="content">
+    {posts.length === 0 && <p>Coming soon, hopefully :)</p>}
+    {
+        posts.length !== 0 &&
+            posts.map((post) => (
+                <PostLink
+                    post={{
+                        title: post.data.title,
+                        preview: post.body.substring(0, 100),
+                        url: `/posts/${post.slug}`,
+                        published_on: post.data.published_on,
+                        tags: post.data.tags,
+                    }}
+                />
+            ))
+    }
+</div>
+
+<style lang="scss">
+    .content {
+        margin: -1rem 0;
+
+        & > :global(*) {
+            margin: 2rem 0;
+        }
+    }
+</style>

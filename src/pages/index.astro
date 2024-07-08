@@ -8,6 +8,7 @@ import ProjectCard from "@components/ProjectCard.astro";
 import ShowMore from "@components/ShowMore.astro";
 import Section from "@components/Section.astro";
 import Grid from "@components/Grid.astro";
+import PostsList from "@components/PostsList.astro";
 ---
 
 <BaseLayout title="Divya Jain">
@@ -31,6 +32,7 @@ import Grid from "@components/Grid.astro";
 
     <Section>
         <Fragment slot="title">Posts</Fragment>
-        Coming soon, hopefully :)
+        <PostsList />
+        <ShowMore url="/projects" />
     </Section>
 </BaseLayout>

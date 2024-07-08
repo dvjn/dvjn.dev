@@ -10,16 +10,15 @@ export interface Project {
 
 export interface Props {
     project: Project;
-    fullCard?: boolean;
 }
 
-const { project, fullCard = false } = Astro.props;
+const { project } = Astro.props;
 ---
 
 <Card href={project.url}>
     <Fragment slot="title">{project.name}</Fragment>
     {
-        fullCard && project.technologies && (
+        project.technologies && (
             <div class="technologies">
                 {project.technologies?.map((technology) => (
                     <span>{technology}</span>

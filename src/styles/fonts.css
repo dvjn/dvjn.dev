@@ -6,17 +6,32 @@
  * http://www.adobe.com/products/eulas/tou_typekit. For font license
  * information, see the list below.
  *
+ * ibm-plex-mono:
+ *   - http://typekit.com/eulas/00000000000000007735944d
  * ibm-plex-sans:
  *   - http://typekit.com/eulas/000000000000000077359445
- *   - http://typekit.com/eulas/000000000000000077359441
  *   - http://typekit.com/eulas/00000000000000007735945d
  *   - http://typekit.com/eulas/00000000000000007735946b
  *
- * © 2009-2022 Adobe Systems Incorporated. All Rights Reserved.
+ * © 2009-2024 Adobe Systems Incorporated. All Rights Reserved.
  */
-/*{"last_published":"2022-08-25 18:54:36 UTC"}*/
+/*{"last_published":"2024-07-20 20:54:19 UTC"}*/
 
-@import url("https://p.typekit.net/p.css?s=1&k=ufz1kxg&ht=tk&f=39885.39886.39889.39893&a=5692731&app=typekit&e=css");
+@import url("https://p.typekit.net/p.css?s=1&k=ufz1kxg&ht=tk&f=39868.39885.39889.39893&a=5692731&app=typekit&e=css");
+
+@font-face {
+    font-family: "ibm-plex-mono";
+    src: url("https://use.typekit.net/af/bda79b/00000000000000007735944d/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3")
+            format("woff2"),
+        url("https://use.typekit.net/af/bda79b/00000000000000007735944d/30/d?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3")
+            format("woff"),
+        url("https://use.typekit.net/af/bda79b/00000000000000007735944d/30/a?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3")
+            format("opentype");
+    font-display: auto;
+    font-style: normal;
+    font-weight: 400;
+    font-stretch: normal;
+}
 
 @font-face {
     font-family: "ibm-plex-sans";
@@ -29,20 +44,6 @@
     font-display: auto;
     font-style: normal;
     font-weight: 400;
-    font-stretch: normal;
-}
-
-@font-face {
-    font-family: "ibm-plex-sans";
-    src: url("https://use.typekit.net/af/0626f2/000000000000000077359441/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n5&v=3")
-            format("woff2"),
-        url("https://use.typekit.net/af/0626f2/000000000000000077359441/30/d?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n5&v=3")
-            format("woff"),
-        url("https://use.typekit.net/af/0626f2/000000000000000077359441/30/a?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n5&v=3")
-            format("opentype");
-    font-display: auto;
-    font-style: normal;
-    font-weight: 500;
     font-stretch: normal;
 }
 
@@ -72,4 +73,11 @@
     font-style: normal;
     font-weight: 800;
     font-stretch: normal;
+}
+
+.tk-ibm-plex-mono {
+    font-family: "ibm-plex-mono", sans-serif;
+}
+.tk-ibm-plex-sans {
+    font-family: "ibm-plex-sans", sans-serif;
 }

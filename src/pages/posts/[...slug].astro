@@ -42,7 +42,9 @@ const { Content } = await render();
             </figure>
         )
     }
-    <Content />
+    <div id="content">
+        <Content />
+    </div>
 </BaseLayout>
 
 <style lang="scss">
@@ -60,5 +62,10 @@ const { Content } = await render();
             font-size: 0.75rem;
             text-align: center;
         }
+    }
+
+    #content {
+        font-size: 1.1rem;
+        line-height: 150%;
     }
 </style>

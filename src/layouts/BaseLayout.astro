@@ -27,10 +27,18 @@ const { title } = Astro.props as Props;
         </main>
         <style lang="scss" is:global>
             :root {
+                --font-family-sans: ibm-plex-sans, sans-serif;
+                --font-family-mono: fira-code, monospace;
+
+                --font-size-xs: 0.75rem;
+                --font-size-sm: 0.9rem;
                 --font-size-base: 1rem;
-                --font-size-md: 1.25rem;
+                --font-size-md: 1.5rem;
                 --font-size-lg: 1.75rem;
                 --font-size-xl: 3rem;
+
+                --font-size-code-sm: 0.9rem;
+                --font-size-code-base: 0.95rem;
 
                 --white: hsla(0, 0%, 100%, 1);
                 --lavender-blush: hsla(342, 32%, 92%, 1);
@@ -54,7 +62,7 @@ const { title } = Astro.props as Props;
             }
 
             html {
-                font-family: ibm-plex-sans, sans-serif;
+                font-family: var(--font-family-sans);
                 font-size: 1rem;
                 color: var(--color-text);
                 background-color: var(--color-bg);
@@ -119,11 +127,11 @@ const { title } = Astro.props as Props;
             }
 
             code {
-                font-family: ibm-plex-mono, monospace;
+                font-family: var(--font-family-mono);
             }
 
             p code {
-                font-size: 0.95rem;
+                font-size: var(--font-size-code-base);
                 padding: 0.1rem;
                 border-radius: 0.25rem;
                 background-color: rgba(255, 255, 255, 0.05);
@@ -172,17 +180,22 @@ const { title } = Astro.props as Props;
                 margin: 0;
 
                 [data-rehype-pretty-code-title] {
+                    font-family: var(--font-family-mono);
+                    font-size: var(--font-size-code-sm);
                     padding: 0.5rem 1rem;
                     background-color: rgba(0, 0, 0, 0.2) !important;
                     border-radius: 1rem 1rem 0 0;
                 }
 
                 [data-rehype-pretty-code-caption] {
+                    font-size: var(--font-size-xs);
                     padding: 0.5rem 1rem;
                     text-align: center;
                 }
 
                 pre {
+                    font-family: var(--font-family-mono);
+                    font-size: var(--font-size-code-base);
                     margin: 0;
 
                     code {

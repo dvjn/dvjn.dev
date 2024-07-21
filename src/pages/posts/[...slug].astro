@@ -19,7 +19,7 @@ import { Image } from "astro:assets";
 export type Props = CollectionEntry<"posts">;
 
 const { render, data } = Astro.props;
-const { Content } = await render();
+const { Content, remarkPluginFrontmatter } = await render();
 ---
 
 <BaseLayout title={`${data.title} | Divya Jain`}>
@@ -27,10 +27,11 @@ const { Content } = await render();
     <Header withGradient>
         <Fragment slot="title">{data.title}</Fragment>
         <Fragment slot="subtitle">
-            <div>
-                <span style="opacity: 0.5">{"Published on "}</span>{
-                    date.format(date.parse(data.published_on, "dd/MM/yyyy", new Date()), "MMM do, yyyy")
-                }
+            <div class="tags">
+                <span>
+                    {date.format(date.parse(data.published_on, "dd/MM/yyyy", new Date()), "MMM do, yyyy")}
+                </span>
+                <span>{remarkPluginFrontmatter.minutesRead}</span>
             </div>
         </Fragment>
     </Header>
@@ -48,6 +49,21 @@ const { Content } = await render();
 </BaseLayout>
 
 <style lang="scss">
+    .tags {
+        display: flex;
+        font-size: var(--font-size-sm);
+        margin: 0.5rem 0;
+
+        span {
+            font-weight: 400;
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            margin-right: 0.25rem;
+            border-radius: 0.25rem;
+            background-color: var(--raisin-black);
+        }
+    }
+
     figure {
         margin: -2rem 0 2rem 0;
 

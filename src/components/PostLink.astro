@@ -1,9 +1,11 @@
 ---
+import * as date from "date-fns";
+
 export interface Post {
     title: string;
     preview: string;
     url: string;
-    published_on: string;
+    published_on: Date;
     tags?: Array<string>;
 }
 
@@ -12,8 +14,6 @@ export interface Props {
 }
 
 const { post } = Astro.props;
-
-import * as date from "date-fns";
 ---
 
 <div>
@@ -21,7 +21,7 @@ import * as date from "date-fns";
         <a href={post.url}>{post.title}</a>
     </div>
     <div class="tags">
-        <span>{date.format(date.parse(post.published_on, "dd/MM/yyyy", new Date()), "MMM do, yyyy")}</span>
+        <span>{date.format(post.published_on, "MMM do, yyyy")}</span>
         {post.tags?.map((tag) => <span>{tag}</span>)}
     </div>
 </div>

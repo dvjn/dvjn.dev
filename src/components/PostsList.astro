@@ -1,27 +1,22 @@
 ---
+import * as date from "date-fns";
 import { getCollection } from "astro:content";
 
 import PostLink from "@components/PostLink.astro";
 
-const posts = await getCollection("posts");
+const posts = (await getCollection("posts"))
+    .map((post) => ({
+        title: post.data.title,
+        preview: post.body.substring(0, 100),
+        url: `/posts/${post.slug}`,
+        published_on: date.parse(post.data.published_on, "dd/MM/yyyy", new Date()),
+        tags: post.data.tags,
+    }))
+    .toSorted((a, b) => date.differenceInMilliseconds(b.published_on, a.published_on));
 ---
 
 <div class="content">
-    {posts.length === 0 && <p>Coming soon, hopefully :)</p>}
-    {
-        posts.length !== 0 &&
-            posts.map((post) => (
-                <PostLink
-                    post={{
-                        title: post.data.title,
-                        preview: post.body.substring(0, 100),
-                        url: `/posts/${post.slug}`,
-                        published_on: post.data.published_on,
-                        tags: post.data.tags,
-                    }}
-                />
-            ))
-    }
+    {posts.map((post) => <PostLink post={post} />)}
 </div>
 
 <style lang="scss">

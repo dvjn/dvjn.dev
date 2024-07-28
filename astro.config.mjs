@@ -5,6 +5,8 @@ import rehypePrettyCode from "rehype-pretty-code";
 import { transformerCopyButton } from "@rehype-pretty/transformers";
 import getReadingTime from "reading-time";
 import { toString } from "mdast-util-to-string";
+import rehypeSlug from "rehype-slug";
+import rehypeAutoLinkHeadings from "rehype-autolink-headings";
 
 export function remarkReadingTime() {
     return function (tree, { data }) {
@@ -32,6 +34,8 @@ export default defineConfig({
                     ],
                 },
             ],
+            rehypeSlug,
+            [rehypeAutoLinkHeadings, { behavior: "wrap" }],
         ],
     },
     integrations: [icon(), mdx()],

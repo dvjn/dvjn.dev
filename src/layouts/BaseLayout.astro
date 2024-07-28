@@ -223,6 +223,11 @@ const { title } = Astro.props as Props;
                         [data-highlighted-line] {
                             background-color: rgba(255, 255, 255, 0.025);
                         }
+
+                        [data-highlighted-chars] {
+                            color: var(--medium-purple);
+                            background-color: transparent;
+                        }
                     }
                 }
 
@@ -236,6 +241,14 @@ const { title } = Astro.props as Props;
                     top: 0;
                     background-color: transparent;
                     border-color: transparent;
+                }
+
+                [data-language="diagram"] {
+                    line-height: 1.25em;
+                }
+
+                [data-language="sprite"] {
+                    line-height: 0.6em;
                 }
             }
         </style>

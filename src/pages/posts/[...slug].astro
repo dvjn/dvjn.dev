@@ -18,7 +18,7 @@ import { Image } from "astro:assets";
 
 export type Props = CollectionEntry<"posts">;
 
-const { render, data } = Astro.props;
+const { render, data, slug } = Astro.props;
 const { Content, remarkPluginFrontmatter } = await render();
 ---
 
@@ -45,6 +45,17 @@ const { Content, remarkPluginFrontmatter } = await render();
     }
     <div id="content">
         <Content />
+
+        <h2>Comments</h2>
+        <script
+            is:inline
+            src="https://utteranc.es/client.js"
+            repo="dvjn/dvjn.github.io"
+            issue-term={`💬 Comments | /posts/${slug}`}
+            label="💬 comments"
+            theme="photon-dark"
+            crossorigin="anonymous"
+            async></script>
     </div>
 </BaseLayout>
 

@@ -16,7 +16,7 @@ const { page } = Astro.props;
 
 <nav>
     <div class="left">
-        <a href="/" class:list={[{ active: page == Pages.Home }]}>Home</a>
+        <a href="/" class:list={[{ active: page == Pages.Home }, "home"]}>Divya Jain</a>
         <a href="/projects" class:list={[{ active: page == Pages.Projects }]}>Projects</a>
         <a href="/posts" class:list={[{ active: page == Pages.Posts }]}>Posts</a>
     </div>
@@ -60,6 +60,11 @@ const { page } = Astro.props;
 
                 &.active {
                     color: var(--color-text-important);
+                    font-weight: 600;
+                }
+
+                &.home {
+                    color: var(--secondary-accent);
                     font-weight: 600;
                 }
 

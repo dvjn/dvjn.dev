@@ -23,16 +23,16 @@ import PostsList from "@components/PostsList.astro";
     </Header>
 
     <Section>
+        <Fragment slot="title">Posts</Fragment>
+        <PostsList />
+        <ShowMore url="/posts" />
+    </Section>
+
+    <Section>
         <Fragment slot="title">Projects</Fragment>
         <Grid>
             {projects.slice(0, 4).map((project) => <ProjectCard project={project} />)}
         </Grid>
-        <ShowMore url="/projects" />
-    </Section>
-
-    <Section>
-        <Fragment slot="title">Posts</Fragment>
-        <PostsList />
         <ShowMore url="/projects" />
     </Section>
 </BaseLayout>

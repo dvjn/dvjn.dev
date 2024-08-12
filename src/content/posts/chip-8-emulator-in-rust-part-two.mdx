@@ -1,0 +1,339 @@
+---
+title: Build a Chip-8 Emulator in Rust - Part 2 - Emulation Cycle
+cover: ./chip-8-brix-desktop.png
+cover_caption: Brix on a Chip-8 Emulator
+tags:
+    - rust
+    - chip-8
+    - emulator
+published_on: 29/07/2024
+---
+
+This is the second part of the series on building a Chip-8 emulator in Rust. In
+the previous post, [Build a Chip-8 Emulator in Rust - Part 1 - Emulator
+Design](./chip-8-emulator-in-rust-part-one), we explored the components of our
+emulator, defining data structures for registers, memory, display, and other
+essential parts. Now, we'll delve into the core functionality of starting and
+running the emulator.
+
+
+## Initializing the Emulator
+
+Let's initialize the emulator by implementing a `new` function. When
+initializing the emulator, all values are expected to be 0 except for the
+program counter, which should start at `0x200` (remember, the first 512 bytes of
+memory are reserved for the interpreter).
+
+```rust title="emulator.rs"
+impl Emulator {
+    pub fn new() -> Self {
+        Self {
+            registers: [0; 16],
+            index: 0,
+            program_counter: 0x200,
+            memory: Memory::new(),
+            stack: Stack::new(),
+            delay_timer: Timer::new(),
+            sound_timer: Timer::new(),
+            keypad: Keypad::new(),
+            display: Display::new(),
+        }
+    }
+}
+```
+
+Initializing most components with zero values is straightforward. However, the
+memory requires additional setup, which we'll explore next.
+
+
+### Initializing the Memory
+
+Let's start by creating an empty memory buffer:
+
+```rust title="memory.rs"
+impl Memory {
+    pub fn new() -> Self {
+        let mut storage = [0; MEMORY_SIZE];
+        Self { storage }
+    }
+}
+```
+
+
+### Adding Font Sprites
+
+As explained in part one of the series, the memory has first 512 bytes reserved
+for the interpreter. In this reserved section, programs generally expect font
+sprites for hexadecimal digits 0 through F at `0x000` address.
+
+But, what is a sprite? and how is it stored in memory?
+
+Chip-8 draws graphics on screen through the use of sprites. Each sprite consists
+of 8-bit bytes, where each bit corresponds to a horizontal pixel; sprites are
+between 1 and 15 bytes tall. Let's visualize this.
+
+Say you wanted to draw the digit 6 on the screen:
+
+```sprite
+■■■■    
+■   
+■■■■
+■  ■
+■■■■
+```
+
+You will create a sprite: `0xF0, 0x80, 0xF0, 0x90, 0xF0`.
+
+This sprite might not make much sense in it's hexadecimal form, but let's
+convert it to binary and look at it again:
+
+```diagram "1"
+0xF0 => 11110000
+0x80 => 10000000
+0xF0 => 11110000
+0x90 => 10010000
+0xF0 => 11110000
+```
+
+From this representation we can understand how each bit represents a pixel on
+the display. So when the user program calls the draw command with this sprite,
+the display pixel is flipped if the bit is set in the sprite. This is how a
+sprite is rendered in Chip-8.
+
+So now we understand what sprites are and how they work, we can add all the
+required sprites to our code:
+
+```rust {2-19} title="memory.rs"
+const MEMORY_SIZE: usize = 0x1000; // 4096
+const FONT_SPRITES: [u8; 5 * 16] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // c
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+];
+```
+
+Let's put these sprites at `0x000` in the memory.
+
+```rust {4} title="memory.rs"
+impl Memory {
+    pub fn new() -> Self {
+        let mut storage = [0; MEMORY_SIZE];
+        storage[0x000..FONT_SPRITES.len()].copy_from_slice(&FONT_SPRITES);
+        Self { storage }
+    }
+}
+```
+
+### Loading the ROM
+
+Another thing the memory is initialized with is the user program, often referred
+to as a ROM. This is stored at the address `0x200`. We can take the ROM as input
+during emulator creation.
+
+Let's add this to our code:
+
+```rust {2,5} title="memory.rs"
+impl Memory {
+    pub fn new(rom: &[u8]) -> Self {
+        let mut storage = [0; MEMORY_SIZE];
+        storage[0x000..FONT_SPRITES.len()].copy_from_slice(&FONT_SPRITES);
+        storage[0x200..(0x200 + rom.len())].copy_from_slice(rom);
+        Self { storage }
+    }
+}
+```
+
+We'll have take the rom as an input for our emulator too and pass it to the
+memory.
+
+```rust {2,7} title="emulator.rs"
+impl Emulator {
+    pub fn new(rom: &[u8]) -> Self {
+        Self {
+            registers: [0; 16],
+            index: 0,
+            program_counter: 0x200,
+            memory: Memory::new(rom),
+            stack: Stack::new(),
+            delay_timer: Timer::new(),
+            sound_timer: Timer::new(),
+            keypad: Keypad::new(),
+            display: Display::new(),
+        }
+    }
+}
+```
+
+Memory is now initialized. The other components can all be initialized with zero
+values, without needing any additional logic. Implementing those is left as an
+exercise to the reader.
+
+
+## Emulation Loop
+
+Let's start with the emulation loop, the code that will drive the emulator.
+
+
+### Starting the Emulator
+
+We'll create a new emulator by first loading a Chip-8 ROM. We can take the path
+of the ROM file as a command-line argument for the program and pass it to out
+emulator.
+
+```rust {1-5,7-10} title="main.rs"
+use std::env::args;
+use std::fs::read;
+
+use crate::emulator::Emulator;
+
+fn main() {
+    let rom_path = args().skip(1).next().expect("rom path");
+    let rom = read(rom_path).expect("rom file");
+
+    let mut emulator = Emulator::new(&rom);
+}
+```
+
+### Running the Emulation Cycle
+
+The emulation cycle needs 2 timed components, one is the CPU and second is the
+timers. The timers count down at a rate of 60Hz, ie, 60 times a second. The CPU
+is not as straightforward, as the execution speed of a Chip-8 CPU is not
+strictly documented and varies from implementation to implementation, varying
+from 500Hz to 1MHz. For our implementation, we can run the emulator at an
+approximate speed of 540 instructions per second (540 Hz).
+
+To implement this, we can start with a loop that runs 60 times a second. We can
+approximately emulate this by running a sleep for `1_000_000_000/60` nanoseconds
+in every iteration.
+
+```rust {3-4,13-16} title="main.rs"
+use std::env::args;
+use std::fs::read;
+use std::thread::sleep;
+use std::time::Duration;
+
+use crate::emulator::Emulator;
+
+fn main() {
+    let rom_path = std::env::args().skip(1).next().expect("rom path");
+    let rom = std::fs::read(rom_path).expect("open rom file");
+
+    let mut emulator = Emulator::new(&rom);
+
+    loop {
+        sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
+}
+```
+
+### Executing CPU Instructions
+
+Since we have to run 540 CPU instructions every second. If we execute 9
+instructions in every iteration, we can achieve approximately 9x60=540
+instructions per second.
+
+```rust {8-10} title="main.rs"
+fn main() {
+    let rom_path = std::env::args().skip(1).next().expect("rom path");
+    let rom = std::fs::read(rom_path).expect("open rom file");
+
+    let mut emulator = Emulator::new(&rom);
+
+    loop {
+        for _ in 0..9 {
+            emulator.run_cycle();
+        }
+
+        sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
+}
+```
+
+For now we'll just implement an empty `run_cycle` associated function for
+Emulator, which we will populate with logic later.
+
+```rust {3-4} title="emulator.rs"
+impl Emulator {
+    // ... other code ...
+
+    pub fn run_cycle(&mut self) {}
+}
+```
+
+### Decrementing Timers
+
+We also have to decrement the sound and delay timers at 60Hz, ie, once per
+iteration of this loop.
+
+```rust {12-13} title="main.rs"
+fn main() {
+    let rom_path = std::env::args().skip(1).next().expect("rom path");
+    let rom = std::fs::read(rom_path).expect("open rom file");
+
+    let mut emulator = Emulator::new(&rom);
+
+    loop {
+        for _ in 0..9 {
+            emulator.run_cycle();
+        }
+
+        emulator.decrement_timers();
+
+        sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
+}
+```
+
+We will implement this function in the `Emulator` struct:
+
+```rust {3-7} title="emulator.rs"
+impl Emulator {
+    // ... other code ...
+
+    pub fn decrement_timers(&mut self) {
+        self.sound_timer.decrement();
+        self.delay_timer.decrement();
+    }
+}
+```
+
+And also implement the decrement function for the `Timer` struct:
+
+```rust title="timer.rs"
+impl Timer {
+    // ... other code ...
+
+    pub fn decrement(&mut self) {
+        if self.value > 0 {
+            self.value -= 1;
+        }
+    }
+}
+```
+
+## Wrapping Up
+
+In this part of the series, we laid the groundwork for our Chip-8 emulator by
+initializing its core components and setting up the emulation loop. We
+implemented loading font sprites into memory, handling ROM loading, and managing
+the emulation cycle, ensuring the CPU runs at an appropriate speed while
+maintaining timings for the delay and sound timers.
+
+In the next part, we'll dive deeper into the execution of Chip-8 instructions,
+decoding and handling various opcodes, and integrating SDL2 to manage graphics,
+input, and sound. With these additions, we'll bring our emulator closer to
+running actual Chip-8 programs and interacting with users. Stay tuned!

@@ -32,7 +32,7 @@ jobs:
         run: pnpm run build
 
       - name: Add CNAME Entry 🌐
-        run: echo "dvjn.is-not-a.dev" > ./dist/CNAME
+        run: echo "dvjn.dev" > ./dist/CNAME
 
       - name: Deploy 🚀
         uses: peaceiris/actions-gh-pages@v3

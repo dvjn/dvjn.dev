@@ -3,10 +3,12 @@ import { type CollectionEntry, getCollection } from "astro:content";
 
 export async function getStaticPaths() {
     const postEntries = await getCollection("posts");
-    return postEntries.map((entry) => ({
-        params: { slug: entry.slug },
-        props: { ...entry },
-    }));
+    return postEntries
+        .filter((post) => post.data.draft !== true)
+        .map((entry) => ({
+            params: { slug: entry.slug },
+            props: { ...entry },
+        }));
 }
 
 import * as date from "date-fns";

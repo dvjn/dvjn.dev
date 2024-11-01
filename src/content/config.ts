@@ -9,6 +9,7 @@ export const collections = {
                 cover_caption: z.string().optional(),
                 tags: z.array(z.string()).optional(),
                 published_on: z.string(),
+                draft: z.boolean().optional(),
             }),
     }),
 };

@@ -4,6 +4,10 @@
         "source_url": "https://github.com/dvjn/goshut"
     },
     {
+        "name": "gosu",
+        "source_url": "https://git.sr.ht/~dvjn/gosu"
+    },
+    {
         "name": "didfed",
         "source_url": "https://git.sr.ht/~dvjn/didfed"
     }

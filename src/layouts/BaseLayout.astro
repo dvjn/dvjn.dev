@@ -17,6 +17,8 @@ const { title } = Astro.props as Props;
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <title>{title}</title>
 
+        <slot name="head" />
+
         <script>
             window.addEventListener("load", () => document.body.classList.remove("preload"));
         </script>

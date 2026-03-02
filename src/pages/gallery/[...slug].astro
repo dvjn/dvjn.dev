@@ -1,0 +1,90 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CaptionedImage from "@components/CaptionedImage.astro";
+import Prose from "@components/Prose.astro";
+import { getAlbums, type Album } from "@utils/albums";
+
+export async function getStaticPaths() {
+    const albums = await getAlbums();
+    return albums.map((album) => ({
+        params: { slug: album.slug },
+        props: { album },
+    }));
+}
+
+const { album } = Astro.props as { album: Album };
+const { Content, title, description, date, location, photos } = album;
+---
+
+<BaseLayout title={`${title} — Divya Jain`} description={description} activePage="gallery">
+    <article>
+        <div class="post-meta">
+            <h1>{title}</h1>
+            <div class="post-byline">
+                <span>{date}</span>
+                {location && <span>{location}</span>}
+            </div>
+            {description && <p class="album-description">{description}</p>}
+        </div>
+
+        <Prose>
+            <Content />
+        </Prose>
+
+        {
+            photos?.map((photo) => (
+                <div class="photo-item">
+                    <CaptionedImage src={photo.image} alt={photo.caption} caption={photo.caption} />
+                </div>
+            ))
+        }
+    </article>
+</BaseLayout>
+
+<style>
+    article {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 5rem 1.5rem 6rem;
+    }
+
+    .post-meta {
+        margin-bottom: var(--space-12);
+        padding: var(--space-8) 0;
+        border-bottom: var(--border-width-lg) solid var(--border);
+    }
+
+    h1 {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 6vw, 3.5rem);
+        color: var(--fg-strong);
+        letter-spacing: 0.02em;
+        line-height: 1.1;
+        margin-bottom: var(--space-4);
+    }
+
+    .post-byline {
+        display: flex;
+        gap: var(--space-4);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--fg);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .album-description {
+        margin-top: var(--space-4);
+        font-family: var(--font-ui);
+        font-size: 0.9rem;
+        color: var(--fg);
+        line-height: 1.8;
+        border-left: var(--border-width-lg) solid var(--border);
+        padding-left: 1rem;
+    }
+
+    .photo-item {
+        margin: var(--space-8) 0;
+    }
+</style>

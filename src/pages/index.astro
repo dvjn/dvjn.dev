@@ -1,11 +1,14 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import NameBox from "@components/NameBox.astro";
+import AlbumCard from "@components/AlbumCard.astro";
 import PostItem from "@components/PostItem.astro";
 import { Icon } from "astro-icon/components";
 import { getPosts } from "@utils/posts";
+import { getAlbums } from "@utils/albums";
 
 const posts = await getPosts();
+const albums = await getAlbums();
 ---
 
 <BaseLayout
@@ -45,6 +48,16 @@ const posts = await getPosts();
             </div>
 
             {posts.slice(0, 3).map((post) => <PostItem post={post} />)}
+        </section>
+
+        <section>
+            <div>
+                <span>Gallery</span>
+                <a href="/gallery">All albums</a>
+            </div>
+            <div>
+                {albums.slice(0, 4).map((album) => <AlbumCard album={album} />)}
+            </div>
         </section>
     </div>
 </BaseLayout>
@@ -127,7 +140,7 @@ const posts = await getPosts();
         section {
             padding: 0 0 5rem;
 
-            > div {
+            > div:first-child {
                 display: flex;
                 justify-content: space-between;
                 align-items: baseline;
@@ -160,6 +173,14 @@ const posts = await getPosts();
                         text-shadow: var(--shadow-offset-hover) var(--shadow-offset-hover) 0 var(--accent);
                     }
                 }
+            }
+
+            // albums grid
+            > div:last-child {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: 1.5rem;
+                margin: 1.5rem 1.5rem 0;
             }
         }
     }

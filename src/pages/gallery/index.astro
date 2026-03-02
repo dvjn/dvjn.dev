@@ -1,0 +1,36 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AlbumCard from "@components/AlbumCard.astro";
+import Header from "@components/Header.astro";
+import { getAlbums } from "@utils/albums";
+
+const albums = await getAlbums();
+---
+
+<BaseLayout
+    title="Gallery — Divya Jain"
+    description="A visual log of places I've been and things I've seen."
+    activePage="gallery">
+    <Header label={`${albums.length} Albums`} title="Gallery">
+        <Fragment slot="subtitle">A visual log of places I've been and things I've seen.</Fragment>
+    </Header>
+
+    <section>
+        <div>
+            {albums.map((album) => <AlbumCard album={album} />)}
+        </div>
+    </section>
+</BaseLayout>
+
+<style lang="scss">
+    section {
+        padding: 1.5rem 1.5rem 5rem;
+
+        > div {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+        }
+    }
+</style>

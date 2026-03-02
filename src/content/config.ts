@@ -13,4 +13,26 @@ export const collections = {
                 draft: z.boolean().optional(),
             }),
     }),
+    albums: defineCollection({
+        schema: ({ image }) =>
+            z.object({
+                title: z.string(),
+                cover: image(),
+                description: z.string().optional(),
+                date: z.string(),
+                location: z.string().optional(),
+                photos: z
+                    .array(
+                        z.union([
+                            image(),
+                            z.object({
+                                image: image(),
+                                caption: z.string().optional(),
+                            }),
+                        ]),
+                    )
+                    .optional(),
+                draft: z.boolean().optional(),
+            }),
+    }),
 };

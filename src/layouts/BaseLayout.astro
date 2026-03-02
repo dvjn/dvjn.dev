@@ -4,7 +4,7 @@ import { Icon } from "astro-icon/components";
 
 interface Props {
     title: string;
-    activePage?: "home" | "blog";
+    activePage?: "home" | "blog" | "gallery";
     description?: string;
     hideHeader?: boolean;
 }
@@ -39,6 +39,9 @@ const { title, description, activePage, hideHeader } = Astro.props;
                             <a href="/blog" class:list={[{ active: activePage === "blog" }]}>
                                 Blog
                             </a>
+                            <a href="/gallery" class:list={[{ active: activePage === "gallery" }]}>
+                                Gallery
+                            </a>
                         </nav>
                         <div>
                             <a href="https://github.com/dvjn" aria-label="GitHub">
@@ -63,6 +66,7 @@ const { title, description, activePage, hideHeader } = Astro.props;
                 <nav>
                     <span>Pages</span>
                     <a href="/blog">Blog</a>
+                    <a href="/gallery">Gallery</a>
                 </nav>
                 <nav>
                     <span>Connect</span>

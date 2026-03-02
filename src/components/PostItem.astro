@@ -1,0 +1,94 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Chip from "@components/Chip.astro";
+import { format, parse } from "date-fns";
+
+interface Props {
+    post: CollectionEntry<"posts">;
+}
+
+const { post } = Astro.props;
+const { remarkPluginFrontmatter } = await post.render();
+const minutesRead = remarkPluginFrontmatter.minutesRead as string | undefined;
+const { title, tags, published_on } = post.data;
+const url = `/blog/${post.slug}`;
+const date = format(parse(published_on, "dd/MM/yyyy", new Date()), "MMM yyyy");
+---
+
+<a href={url}>
+    <div>
+        <strong>{title}</strong>
+        {
+            tags && tags.length > 0 && (
+                <div>
+                    {tags.map((tag) => (
+                        <Chip label={tag} />
+                    ))}
+                </div>
+            )
+        }
+    </div>
+    <div>
+        {minutesRead && <small>{minutesRead}</small>}
+        <time>{date}</time>
+    </div>
+</a>
+
+<style lang="scss">
+    a {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        padding: var(--space-4) 1.5rem var(--space-4) 1.25rem;
+        border-bottom: var(--border-width) solid var(--border);
+        text-decoration: none;
+        color: inherit;
+        transition: box-shadow var(--duration-fast);
+        gap: var(--space-4);
+        align-items: center;
+
+        &:hover,
+        &:focus-visible {
+            box-shadow: inset 10px 0 0 var(--accent);
+        }
+
+        > div:first-child {
+            flex: 1;
+
+            strong {
+                font-family: var(--font-display);
+                font-size: 1.4rem;
+                font-weight: 700;
+                color: var(--fg-strong);
+                margin-bottom: 0.25rem;
+                line-height: 1.35;
+                display: block;
+            }
+
+            div {
+                display: flex;
+                gap: 0.4rem;
+                flex-wrap: wrap;
+                margin-top: 0.4rem;
+            }
+        }
+
+        > div:last-child {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.25rem;
+
+            small,
+            time {
+                font-family: var(--font-mono);
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: var(--fg);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                white-space: nowrap;
+                text-align: right;
+            }
+        }
+    }
+</style>

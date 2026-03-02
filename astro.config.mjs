@@ -24,7 +24,7 @@ export default defineConfig({
             [
                 rehypePrettyCode,
                 {
-                    theme: "github-dark-default",
+                    theme: "aurora-x",
                     keepBackground: false,
                     transformers: [
                         transformerCopyButton({

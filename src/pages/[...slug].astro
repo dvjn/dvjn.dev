@@ -1,4 +1,5 @@
 ---
+import Header from "@components/Header.astro";
 import vanity_urls from "@data/go_vanity_urls.json";
 
 export async function getStaticPaths() {
@@ -9,8 +10,6 @@ export async function getStaticPaths() {
 }
 
 import BaseLayout from "@layouts/BaseLayout.astro";
-import Navbar from "@components/Navbar.astro";
-import Header from "@components/Header.astro";
 
 export type Props = {
     name: string;
@@ -28,11 +27,7 @@ const vanity_url = `dvjn.dev/${name}`;
         <meta http-equiv="refresh" content=`0;URL='${source_url}'` />
     </Fragment>
 
-    <Navbar />
-    <Header withGradient>
-        <Fragment slot="title">{name}</Fragment>
-        <Fragment slot="subtitle">
-            Redirecting to <a href={source_url}>{source_url}</a>
-        </Fragment>
+    <Header label="Go Vanity URL" title={name}>
+        <Fragment slot="subtitle">Redirecting to <a href={source_url}>{source_url}</a></Fragment>
     </Header>
 </BaseLayout>

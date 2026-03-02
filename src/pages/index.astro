@@ -1,38 +1,176 @@
 ---
-import projects from "@data/projects.json";
-
+import { getCollection } from "astro:content";
+import NameBox from "@components/NameBox.astro";
+import PostItem from "@components/PostItem.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
-import Navbar, { Pages } from "@components/Navbar.astro";
-import Header from "@components/Header.astro";
-import ProjectCard from "@components/ProjectCard.astro";
-import ShowMore from "@components/ShowMore.astro";
-import Section from "@components/Section.astro";
-import Grid from "@components/Grid.astro";
-import PostsList from "@components/PostsList.astro";
+import { Icon } from "astro-icon/components";
+import { differenceInMilliseconds, parse } from "date-fns";
+
+const posts = (await getCollection("posts"))
+    .filter((post) => post.data.draft !== true)
+    .sort((a, b) =>
+        differenceInMilliseconds(
+            parse(b.data.published_on, "dd/MM/yyyy", new Date()),
+            parse(a.data.published_on, "dd/MM/yyyy", new Date()),
+        ),
+    );
 ---
 
-<BaseLayout title="Divya Jain">
-    <Navbar page={Pages.Home} />
-    <Header withGradient>
-        <Fragment slot="title">Divya Jain</Fragment>
-        <Fragment slot="subtitle">A <em>developer</em>, <em>creator</em>, and <em>lifelong learner</em>.</Fragment>
-        <p>
-            Love architecting solutions, writing code, and learning new technologies. Working on DevOps at Seclore.
-            Writing projects in Rust, Python and JS in free time.
-        </p>
-    </Header>
+<BaseLayout title="Divya Jain" activePage="home" hideHeader>
+    <div>
+        <div>
+            <NameBox size="xl" />
+            <div>
+                <div>
+                    <p>
+                        <em>DevOps</em> at <em>Seclore</em>.
+                        <br />
+                        Tinkering in <em>Rust</em> & <em>Go</em>.
+                        <br />
+                        Exploring the world of <em>Agentic AI</em>.
+                    </p>
+                    <span>Always learning. Rarely done.</span>
+                    <nav>
+                        <a href="https://github.com/dvjn" aria-label="GitHub">
+                            <Icon name="radix-icons:github-logo" />
+                        </a>
+                        <a href="https://linkedin.com/in/dvjn" aria-label="LinkedIn">
+                            <Icon name="radix-icons:linkedin-logo" />
+                        </a>
+                    </nav>
+                </div>
+            </div>
+        </div>
 
-    <Section>
-        <Fragment slot="title">Posts</Fragment>
-        <PostsList />
-        <ShowMore url="/posts" />
-    </Section>
+        <section>
+            <div>
+                <span>Blog</span>
+                <a href="/blog">All posts</a>
+            </div>
 
-    <Section>
-        <Fragment slot="title">Projects</Fragment>
-        <Grid>
-            {projects.slice(0, 4).map((project) => <ProjectCard project={project} />)}
-        </Grid>
-        <ShowMore url="/projects" />
-    </Section>
+            {posts.slice(0, 3).map((post) => <PostItem post={post} />)}
+        </section>
+    </div>
 </BaseLayout>
+
+<style lang="scss">
+    // outermost div = page grid
+    div {
+        // hero row
+        > div:first-child {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 0;
+            border-bottom: var(--border-width-lg) solid var(--border);
+
+            // cell-right (after NameBox <a>)
+            > div {
+                display: flex;
+                flex-direction: column;
+
+                // cell-tagline
+                > div {
+                    background: var(--bg);
+                    padding: 2rem;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    gap: 1.5rem;
+                    flex: 1;
+
+                    p {
+                        font-size: 1rem;
+                        color: var(--fg);
+                        line-height: 1.75;
+
+                        em {
+                            font-style: normal;
+                            color: var(--fg-strong);
+                            font-weight: 700;
+                        }
+                    }
+
+                    span {
+                        font-size: 0.65rem;
+                        font-weight: 700;
+                        color: var(--fg-strong);
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        border-left: var(--border-width-lg) solid var(--accent);
+                        padding-left: 0.75rem;
+                    }
+
+                    nav {
+                        display: flex;
+                        gap: 1rem;
+
+                        a {
+                            color: var(--fg-strong);
+                            text-decoration: none;
+                            display: flex;
+                            align-items: center;
+                            transition: filter var(--duration-fast);
+
+                            svg {
+                                width: 1.25rem;
+                                height: 1.25rem;
+                            }
+
+                            &:hover,
+                            &:focus-visible {
+                                filter: drop-shadow(
+                                    var(--shadow-offset-hover) var(--shadow-offset-hover) 0 var(--accent)
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        section {
+            padding: 0 0 5rem;
+
+            > div {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: var(--space-8) 1.5rem var(--space-4);
+                border-bottom: var(--border-width-lg) solid var(--border);
+
+                span {
+                    font-family: var(--font-display);
+                    font-size: 1.2rem;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    color: var(--fg-strong);
+                }
+
+                a {
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--fg-strong);
+                    text-decoration: none;
+                    transition: text-shadow var(--duration-fast);
+
+                    &::after {
+                        content: " →";
+                    }
+
+                    &:hover,
+                    &:focus-visible {
+                        text-shadow: var(--shadow-offset-hover) var(--shadow-offset-hover) 0 var(--accent);
+                    }
+                }
+            }
+        }
+    }
+
+    @media (max-width: 768px) {
+        div > div:first-child {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

@@ -16,7 +16,6 @@ emulator, defining data structures for registers, memory, display, and other
 essential parts. Now, we'll delve into the core functionality of starting and
 running the emulator.
 
-
 ## Initializing the Emulator
 
 Let's initialize the emulator by implementing a `new` function. When
@@ -45,7 +44,6 @@ impl Emulator {
 Initializing most components with zero values is straightforward. However, the
 memory requires additional setup, which we'll explore next.
 
-
 ### Initializing the Memory
 
 Let's start by creating an empty memory buffer:
@@ -58,7 +56,6 @@ impl Memory {
     }
 }
 ```
-
 
 ### Adding Font Sprites
 
@@ -75,8 +72,8 @@ between 1 and 15 bytes tall. Let's visualize this.
 Say you wanted to draw the digit 6 on the screen:
 
 ```sprite
-■■■■    
-■   
+■■■■
+■
 ■■■■
 ■  ■
 ■■■■
@@ -181,11 +178,9 @@ Memory is now initialized. The other components can all be initialized with zero
 values, without needing any additional logic. Implementing those is left as an
 exercise to the reader.
 
-
 ## Emulation Loop
 
 Let's start with the emulation loop, the code that will drive the emulator.
-
 
 ### Starting the Emulator
 

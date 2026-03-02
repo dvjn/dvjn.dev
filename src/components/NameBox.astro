@@ -1,0 +1,60 @@
+---
+interface Props {
+    size: "s" | "m" | "xl";
+}
+
+const { size } = Astro.props;
+
+const fontSize = {
+    s: "2.2rem",
+    m: "clamp(2rem, 6vw, 4rem)",
+    xl: "clamp(5rem, 14vw, 12rem)",
+}[size];
+---
+
+<a href="/" style={`font-size: ${fontSize}`}>
+    <span>DIVYA</span>
+    <span>JAIN</span>
+</a>
+
+<style lang="scss">
+    a {
+        background: var(--accent);
+        border-right: var(--border-width-lg) solid var(--border);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 0.5em 0.75em;
+        text-decoration: none;
+        line-height: 0.85;
+
+        span {
+            font-family: var(--font-display);
+            display: block;
+            letter-spacing: 0.05em;
+            transition: text-shadow var(--duration-fast);
+        }
+
+        span:first-child {
+            color: var(--accent-fg);
+            text-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--border);
+        }
+
+        span:last-child {
+            color: var(--fg-strong);
+            text-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--black);
+        }
+
+        &:hover,
+        &:focus-visible {
+            span:first-child {
+                text-shadow: var(--shadow-offset-hover) var(--shadow-offset-hover) 0 var(--border);
+            }
+
+            span:last-child {
+                text-shadow: var(--shadow-offset-hover) var(--shadow-offset-hover) 0 var(--black);
+            }
+        }
+    }
+</style>

@@ -1,0 +1,251 @@
+---
+title: Build a Chip-8 Emulator in Rust - Part 4 - Display
+description: "Part 4 of building a Chip-8 emulator in Rust: implementing the display with XOR sprite drawing and pixel wrapping, then wiring up CLS and DRW."
+tags:
+    - rust
+    - chip-8
+    - emulator
+published_on: 14/03/2026
+---
+
+This is the fourth part of the series on building a Chip-8 emulator in Rust. In
+[part 3](./chip-8-emulator-in-rust-part-three), we decoded instructions and
+added the first opcodes: register loads, jumps, and skips. This part
+implements the display component and adds the two opcodes that drive it: clear
+screen and draw sprite.
+
+## Implementing the display
+
+Chip-8 draws graphics through sprites: sequences of bytes where each bit is a
+pixel. The display is 64×32 monochrome. Sprites are drawn with XOR: each set
+bit in the sprite flips the corresponding pixel. If a pixel was already on and
+gets flipped off, that's a collision, and `VF` gets set to 1.
+
+### Clearing the screen
+
+`cls` resets the entire buffer back to `false`:
+
+```rust {2-4} title="display.rs"
+impl Display {
+    pub fn cls(&mut self) {
+        self.buffer = [false; DISPLAY_PIXELS];
+    }
+}
+```
+
+### Getting the buffer
+
+The frontend needs to read the pixel buffer to render it. We expose it as a
+reference:
+
+```rust {2-4} title="display.rs"
+impl Display {
+    pub fn get_buffer(&self) -> &[bool; DISPLAY_PIXELS] {
+        &self.buffer
+    }
+}
+```
+
+### Pixel helpers
+
+The buffer is a flat array, so we need helpers to convert `(x, y)` coordinates
+to an index. The formula is `x + y * 64`:
+
+```rust {2-8} title="display.rs"
+impl Display {
+    fn set_pixel(&mut self, x: usize, y: usize, pixel: bool) {
+        self.buffer[x + y * DISPLAY_WIDTH] = pixel;
+    }
+
+    fn get_pixel(&self, x: usize, y: usize) -> bool {
+        self.buffer[x + y * DISPLAY_WIDTH]
+    }
+}
+```
+
+Now we can add `xor_pixel`, which XOR-flips a pixel and reports whether it was
+erased. A collision is when a lit pixel (`current_value == true`) gets flipped
+off (`value == true`), so both have to be true:
+
+```rust {2-9} title="display.rs"
+impl Display {
+    fn xor_pixel(&mut self, x: usize, y: usize, value: bool) -> bool {
+        let current_value = self.get_pixel(x, y);
+        let new_value = current_value ^ value;
+
+        self.set_pixel(x, y, new_value);
+
+        current_value && value
+    }
+}
+```
+
+### Drawing a sprite
+
+With those helpers in place, we can implement `draw`. It takes an `(x, y)`
+origin and a byte slice of sprite rows, XOR-draws each pixel, and returns
+`true` if any collision occurred:
+
+```rust {2-21} title="display.rs"
+impl Display {
+    pub fn draw(&mut self, x: usize, y: usize, sprites: &[u8]) -> bool {
+        let mut collision = false;
+
+        let rows = (0..sprites.len())
+            .map(|row| (y + row).rem_euclid(DISPLAY_HEIGHT))
+            .collect::<Vec<usize>>();
+        let cols = (0..8)
+            .map(|col| (x + col).rem_euclid(DISPLAY_WIDTH))
+            .collect::<Vec<usize>>();
+
+        for (j, &y) in rows.iter().enumerate() {
+            for (i, &x) in cols.iter().enumerate() {
+                let value = (sprites[j] >> (7 - i)) & 0x01 > 0;
+
+                collision |= self.xor_pixel(x, y, value);
+            }
+        }
+
+        collision
+    }
+}
+```
+
+Sprites that start near an edge wrap around to the other side. `rem_euclid`
+handles this. Unlike `%`, it always returns a non-negative result.
+Pre-computing the row and column indices before the inner loop keeps the body
+readable.
+
+For bit extraction: column `i` (0 = leftmost) shifts the sprite byte right by
+`7 - i` and masks with `0x01` to isolate that bit.
+
+## Wiring up the opcodes
+
+With the display implemented, we can add the match arms that use it. We also
+need to expose `display` as a public field so the frontend can read the buffer:
+
+```rust {5} title="emulator.rs"
+pub struct Emulator {
+    registers: [u8; 16],
+    index: u16,
+    program_counter: u16,
+    pub display: Display,
+    // ...
+}
+```
+
+### 00E0 - CLS
+
+Clear the display:
+
+```rust {6-9} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x0, 0x0, 0xE, 0x0) => {
+            // 00E0 - CLS
+            self.display.cls();
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-17} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_cls() {
+        let mut emulator = Emulator::new(&[]);
+
+        // draw something first, then clear
+        emulator.registers[0x0] = 0;
+        emulator.index = 0;
+        emulator.execute_instruction(Instruction::from_opcode(0xD005));
+        assert!(emulator.display.get_buffer()[0], "pixel was set");
+
+        emulator.execute_instruction(Instruction::from_opcode(0x00E0));
+        assert!(!emulator.display.get_buffer()[0], "pixel was cleared");
+    }
+}
+```
+
+### Dxyn - DRW Vx, Vy, nibble
+
+Draw an n-row sprite from memory at address `I` to screen position `(Vx, Vy)`.
+Set `VF` to 1 if any pixels were erased by the XOR, 0 otherwise:
+
+```rust {6-18} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xD, _, _, _) => {
+            // Dxyn - DRW Vx, Vy, nibble
+            let x = self.registers[instruction.x() as usize] as usize;
+            let y = self.registers[instruction.y() as usize] as usize;
+            let mem_start = self.index as usize;
+            let mem_end = mem_start + instruction.n() as usize;
+
+            let collision = self
+                .display
+                .draw(x, y, &self.memory.as_slice()[mem_start..mem_end]);
+
+            self.registers[0xF] = if collision { 0x1 } else { 0x0 };
+        }
+        _ => {}
+    }
+}
+```
+
+`x` and `y` come from the V registers. We slice `n` bytes starting at
+`self.index` and pass them to `display.draw`. Collision goes straight into `VF`.
+
+The font sprites loaded into memory during initialization make a convenient
+test. The `0` sprite starts at address `0x0`, and its top row is `0xF0 =
+11110000`, so pixels 0–3 should be lit and pixel 4 dark:
+
+```rust {5-25} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_drw() {
+        let mut emulator = Emulator::new(&[]);
+
+        // font sprite for '0' lives at address 0x0
+        emulator.registers[0x0] = 0;
+        emulator.index = 0;
+        emulator.execute_instruction(Instruction::from_opcode(0xD005));
+
+        let buf = emulator.display.get_buffer();
+
+        // top row of '0': 0xF0 = 11110000
+        assert!(buf[0]);
+        assert!(buf[1]);
+        assert!(buf[2]);
+        assert!(buf[3]);
+        assert!(!buf[4]);
+
+        // no collision when drawing into empty display
+        assert_eq!(emulator.registers[0xF], 0x0);
+    }
+}
+```
+
+## Wrapping up
+
+In this part, we implemented the display with XOR sprite drawing and edge
+wrapping, and wired up the two display opcodes: CLS and DRW, each with a unit
+test. With these in place, the emulator can put pixels on screen.
+
+In the next part, [Build a Chip-8 Emulator in Rust - Part 5 - Control Flow,
+Arithmetic & Memory](./chip-8-emulator-in-rust-part-five), we'll implement the
+stack and add all remaining opcodes: subroutines, arithmetic, logic, random
+numbers, and memory operations.

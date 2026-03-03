@@ -1,8 +1,6 @@
 ---
 title: Build a Chip-8 Emulator in Rust - Part 2 - Emulation Cycle
-description: "Part 2 of building a Chip-8 emulator in Rust: initializing memory with font sprites and ROM loading, implementing the emulation loop at 540Hz, and managing delay and sound timers at 60Hz."
-cover: ./chip-8-brix-desktop.png
-cover_caption: Brix on a Chip-8 Emulator
+description: "Part 2 of building a Chip-8 emulator in Rust: initializing memory with font sprites and ROM loading, implementing the emulation loop at 600Hz, and managing delay and sound timers at 60Hz."
 tags:
     - rust
     - chip-8
@@ -210,7 +208,7 @@ timers. The timers count down at a rate of 60Hz, ie, 60 times a second. The CPU
 is not as straightforward, as the execution speed of a Chip-8 CPU is not
 strictly documented and varies from implementation to implementation, varying
 from 500Hz to 1MHz. For our implementation, we can run the emulator at an
-approximate speed of 540 instructions per second (540 Hz).
+approximate speed of 600 instructions per second (600 Hz).
 
 To implement this, we can start with a loop that runs 60 times a second. We can
 approximately emulate this by running a sleep for `1_000_000_000/60` nanoseconds
@@ -238,8 +236,8 @@ fn main() {
 
 ### Executing CPU Instructions
 
-Since we have to run 540 CPU instructions every second. If we execute 9
-instructions in every iteration, we can achieve approximately 9x60=540
+Since we have to run 600 CPU instructions every second. If we execute 10
+instructions in every iteration, we can achieve approximately 10x60=600
 instructions per second.
 
 ```rust {8-10} title="main.rs"
@@ -250,7 +248,7 @@ fn main() {
     let mut emulator = Emulator::new(&rom);
 
     loop {
-        for _ in 0..9 {
+        for _ in 0..10 {
             emulator.run_cycle();
         }
 
@@ -283,7 +281,7 @@ fn main() {
     let mut emulator = Emulator::new(&rom);
 
     loop {
-        for _ in 0..9 {
+        for _ in 0..10 {
             emulator.run_cycle();
         }
 
@@ -329,7 +327,7 @@ implemented loading font sprites into memory, handling ROM loading, and managing
 the emulation cycle, ensuring the CPU runs at an appropriate speed while
 maintaining timings for the delay and sound timers.
 
-In the next part, we'll dive deeper into the execution of Chip-8 instructions,
-decoding and handling various opcodes, and integrating SDL2 to manage graphics,
-input, and sound. With these additions, we'll bring our emulator closer to
-running actual Chip-8 programs and interacting with users. Stay tuned!
+In the next part, [Build a Chip-8 Emulator in Rust - Part 3 - Instruction
+Decoding](./chip-8-emulator-in-rust-part-three), we'll decode instructions into
+nibbles and wire up the first opcodes — register loads, jumps, and skips. After
+that, `run_cycle` will actually do something.

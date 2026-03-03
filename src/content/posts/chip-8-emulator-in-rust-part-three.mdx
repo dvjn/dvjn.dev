@@ -1,0 +1,420 @@
+---
+title: Build a Chip-8 Emulator in Rust - Part 3 - Instruction Decoding
+description: "Part 3 of building a Chip-8 emulator in Rust: decoding 2-byte opcodes into nibbles, implementing the Instruction struct, and adding the first opcodes: register loads, jumps, and skip instructions."
+tags:
+    - rust
+    - chip-8
+    - emulator
+published_on: 14/03/2026
+---
+
+This is the third part of the series on building a Chip-8 emulator in Rust. In
+[part 2](./chip-8-emulator-in-rust-part-two), we got the emulation loop
+running: loading fonts and ROMs into memory, calling `run_cycle` nine times per
+tick, and decrementing the timers. `run_cycle` itself was empty. Now we'll fill
+it in, starting with instruction decoding.
+
+## Instruction encoding
+
+Every Chip-8 instruction is exactly 2 bytes. Split those bytes into four 4-bit
+nibbles and you have everything the instruction encodes:
+
+```diagram
+   byte 1      byte 2
+┌─────┬─────┬─────┬─────┐
+│ n 1 │ n 2 │ n 3 │ n 4 │
+└─────┴─────┴─────┴─────┘
+ └─┬─┘ └─┬─┘ └─┬─┘ └─┬─┘
+ opcode  x     y     n
+             └────┬────┘
+                  kk
+       └───────┬───────┘
+              nnn
+```
+
+The first nibble identifies the operation. The rest are operands:
+
+- `x` and `y`: which V register to use (0-F)
+- `n`: a small 4-bit number
+- `kk`: a byte-sized constant (n3 + n4)
+- `nnn`: a 12-bit memory address (n2 + n3 + n4)
+
+Some instructions use all of them, some use none. A few examples:
+
+- `0xA300`: opcode `A` (set index register), `nnn = 0x300`
+- `0x6A42`: opcode `6` (load constant), `x = 0xA`, `kk = 0x42`
+- `0x8AB4`: opcode `8` (arithmetic), `x = 0xA`, `y = 0xB`, `n = 0x4`
+- `0x00E0`: opcode `0`, all nibbles are literals (clear screen)
+
+## The Instruction struct
+
+Let's create a type to represent a decoded instruction. A tuple struct of four
+`u8` nibbles works well. It can be pattern matched directly against nibble
+literals in a `match`. We'll put it in a new `instruction` module:
+
+```rust title="instruction.rs"
+pub struct Instruction(pub u8, pub u8, pub u8, pub u8);
+```
+
+### Reading from memory
+
+The `read` function takes a memory slice and a program counter, grabs the two
+bytes at that address, and splits them into nibbles.
+
+Chip-8 stores instructions in **big-endian** order: the first byte in memory
+holds the most significant bits, the second byte holds the least significant
+bits. So for the instruction `0x6A42`, `memory[pc]` is `0x6A` and
+`memory[pc + 1]` is `0x42`. This is the opposite of **little-endian**, where
+the least significant byte comes first (as on x86). The distinction matters
+here because we must read the bytes in the right order before splitting them
+into nibbles:
+
+```rust title="instruction.rs"
+impl Instruction {
+    pub fn read(memory: &[u8], location: u16) -> Self {
+        let first_byte = memory[location as usize];
+        let second_byte = memory[location as usize + 1];
+
+        Self(
+            (first_byte & 0xF0) >> 4,
+            first_byte & 0x0F,
+            (second_byte & 0xF0) >> 4,
+            second_byte & 0x0F,
+        )
+    }
+}
+```
+
+`0xF0` / `0x0F` masks isolate the high and low halves of each byte. The high
+nibble shifts right by 4 to land in the range 0–F.
+
+### Helper accessors
+
+Referencing `instruction.0`, `instruction.1` everywhere gets noisy. Named
+accessors for each operand are cleaner:
+
+```rust title="instruction.rs"
+impl Instruction {
+    // ... read() ...
+
+    pub fn nnn(&self) -> u16 {
+        (self.1 as u16) << 8 | (self.2 as u16) << 4 | (self.3 as u16)
+    }
+
+    pub fn n(&self) -> u8 {
+        self.3
+    }
+
+    pub fn x(&self) -> u8 {
+        self.1
+    }
+
+    pub fn y(&self) -> u8 {
+        self.2
+    }
+
+    pub fn kk(&self) -> u8 {
+        self.2 << 4 | self.3
+    }
+}
+```
+
+`nnn()` reassembles three nibbles into a 12-bit `u16`. `kk()` combines the
+third and fourth nibbles back into a byte. The rest just return a nibble
+directly.
+
+Add the module declaration to `main.rs`:
+
+```rust {3} title="main.rs"
+mod display;
+mod emulator;
+mod instruction;
+mod keypad;
+mod memory;
+mod stack;
+mod timer;
+```
+
+## Filling in run_cycle
+
+With `Instruction` in place, we can wire up `run_cycle`. Each cycle fetches an
+instruction from memory at the current program counter, then passes it to
+`execute_instruction` for dispatch:
+
+```rust {1-2,6-17} title="emulator.rs"
+use crate::instruction::Instruction;
+
+impl Emulator {
+    // ... other code ...
+
+    pub fn run_cycle(&mut self) {
+        let instruction = Instruction::read(self.memory.as_slice(), self.program_counter);
+        self.execute_instruction(instruction);
+    }
+
+    fn execute_instruction(&mut self, _instruction: Instruction) {
+        self.program_counter += 2;
+
+        match _instruction {
+            _ => {}
+        }
+    }
+}
+```
+
+The program counter advances inside `execute_instruction`, before the match.
+That matters for jump and call opcodes, which overwrite `program_counter`
+directly. They need to land at their target without fighting the fetch step.
+
+Splitting fetch and dispatch into two methods also makes tests clean:
+`execute_instruction` can be called directly with any instruction without
+needing to set up memory.
+
+The `match` destructures the tuple struct against nibble literals. Unknown
+opcodes fall through to `_ => {}` and are silently ignored.
+
+## Basic opcodes
+
+The tests call `execute_instruction` directly with a hardcoded opcode rather
+than loading a ROM. To make that ergonomic, add a test-only constructor to
+`Instruction` that splits a raw `u16` into nibbles:
+
+```rust title="instruction.rs"
+impl Instruction {
+    #[cfg(test)]
+    pub fn from_opcode(opcode: u16) -> Self {
+        Self(
+            ((opcode & 0xF000) >> 12) as u8,
+            ((opcode & 0x0F00) >> 8) as u8,
+            ((opcode & 0x00F0) >> 4) as u8,
+            (opcode & 0x000F) as u8,
+        )
+    }
+}
+```
+
+### 6xkk - LD Vx, byte
+
+Load an 8-bit constant into register Vx:
+
+```rust {5-8} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        Instruction(0x6, _, _, _) => {
+            // 6xkk - LD Vx, byte
+            self.registers[instruction.x() as usize] = instruction.kk();
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-14} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_vx_byte() {
+        let mut emulator = Emulator::new(&[]);
+
+        emulator.execute_instruction(Instruction::from_opcode(0x61AA));
+        assert_eq!(emulator.registers[0x1], 0xAA, "V1 is set to 0xAA");
+
+        emulator.execute_instruction(Instruction::from_opcode(0x6A15));
+        assert_eq!(emulator.registers[0xA], 0x15, "VA is set to 0x15");
+    }
+}
+```
+
+### Annn - LD I, addr
+
+Set the index register to a 12-bit address:
+
+```rust {6-9} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xA, _, _, _) => {
+            // Annn - LD I, addr
+            self.index = instruction.nnn();
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-11} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_i_addr() {
+        let mut emulator = Emulator::new(&[]);
+
+        emulator.execute_instruction(Instruction::from_opcode(0xAFAF));
+        assert_eq!(emulator.index, 0x0FAF, "index register is updated");
+    }
+}
+```
+
+### 1nnn - JP addr
+
+Set the program counter to `nnn`. Because the counter was already advanced by 2
+at the top of `execute_instruction`, this just overwrites it with the target:
+
+```rust {6-9} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x1, _, _, _) => {
+            // 1nnn - JP addr
+            self.program_counter = instruction.nnn();
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-11} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_jp() {
+        let mut emulator = Emulator::new(&[]);
+
+        emulator.execute_instruction(Instruction::from_opcode(0x1ABC));
+        assert_eq!(emulator.program_counter, 0x0ABC, "jumped to address");
+    }
+}
+```
+
+## Skip instructions
+
+These opcodes advance the program counter by an extra 2 bytes, skipping the
+next instruction, based on a condition.
+
+### 3xkk - SE Vx, byte and 4xkk - SNE Vx, byte
+
+`SE` skips if `Vx == kk`. `SNE` skips if `Vx != kk`:
+
+```rust {6-19} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x3, _, _, _) => {
+            // 3xkk - SE Vx, byte
+            let vx = self.registers[instruction.x() as usize];
+            if vx == instruction.kk() {
+                self.program_counter += 2;
+            }
+        }
+        Instruction(0x4, _, _, _) => {
+            // 4xkk - SNE Vx, byte
+            let vx = self.registers[instruction.x() as usize];
+            if vx != instruction.kk() {
+                self.program_counter += 2;
+            }
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-16} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_se_vx_byte() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.program_counter = 0x200;
+        emulator.registers[0x1] = 0xAA;
+
+        emulator.execute_instruction(Instruction::from_opcode(0x31AA));
+        assert_eq!(emulator.program_counter, 0x204, "skipped next instruction");
+
+        emulator.execute_instruction(Instruction::from_opcode(0x31BB));
+        assert_eq!(emulator.program_counter, 0x206, "did not skip");
+    }
+}
+```
+
+### 5xy0 - SE Vx, Vy and 9xy0 - SNE Vx, Vy
+
+Same idea, but comparing two registers. `5xy0` skips if equal, `9xy0` skips if
+not equal:
+
+```rust {6-21} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x5, _, _, 0x0) => {
+            // 5xy0 - SE Vx, Vy
+            let vx = self.registers[instruction.x() as usize];
+            let vy = self.registers[instruction.y() as usize];
+            if vx == vy {
+                self.program_counter += 2;
+            }
+        }
+        Instruction(0x9, _, _, 0x0) => {
+            // 9xy0 - SNE Vx, Vy
+            let vx = self.registers[instruction.x() as usize];
+            let vy = self.registers[instruction.y() as usize];
+            if vx != vy {
+                self.program_counter += 2;
+            }
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-18} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_se_vx_vy() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.program_counter = 0x200;
+        emulator.registers[0x1] = 0xAA;
+        emulator.registers[0x2] = 0xAA;
+        emulator.registers[0x3] = 0xBB;
+
+        emulator.execute_instruction(Instruction::from_opcode(0x5120));
+        assert_eq!(emulator.program_counter, 0x204, "skipped: V1 == V2");
+
+        emulator.execute_instruction(Instruction::from_opcode(0x5130));
+        assert_eq!(emulator.program_counter, 0x206, "not skipped: V1 != V3");
+    }
+}
+```
+
+## Wrapping up
+
+In this part, we decoded Chip-8's 2-byte instructions into four nibbles,
+implemented the `Instruction` struct with named accessors, and wired up
+`run_cycle` to fetch and dispatch. We then added the first group of opcodes:
+loading constants into registers, setting the index register, jumping, and
+skipping based on comparisons. These are pure CPU operations: no stack, no
+display, no memory writes.
+
+In the next part, [Build a Chip-8 Emulator in Rust - Part 4 -
+Display](./chip-8-emulator-in-rust-part-four), we'll implement the display
+component and add the sprite-drawing opcodes.

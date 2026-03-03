@@ -1,0 +1,311 @@
+---
+title: Build a Chip-8 Emulator in Rust - Part 6 - Keypad & Timers
+description: "Part 6 of building a Chip-8 emulator in Rust: completing the keypad and timer components, then implementing all keypad and timer opcodes including the blocking key-wait instruction."
+tags:
+    - rust
+    - chip-8
+    - emulator
+published_on: 14/03/2026
+---
+
+This is the sixth part of the series on building a Chip-8 emulator in Rust. In
+[part 5](./chip-8-emulator-in-rust-part-five), we implemented the stack and
+added all control flow, arithmetic, logic, and memory opcodes. This part
+completes the keypad and timer components, then adds the opcodes that use them.
+
+## Completing the keypad
+
+The keypad was defined in part 1 as a `[bool; 16]` array. We need three
+operations: check if a key is pressed, press a key, and release a key. The
+frontend will call `key_down` and `key_up` in response to physical keyboard
+events:
+
+```rust title="keypad.rs"
+impl Keypad {
+    pub fn new() -> Self {
+        Self { keys: [false; 16] }
+    }
+
+    pub fn clear(&mut self) {
+        self.keys = [false; 16];
+    }
+
+    pub fn get_key(&self, key: u8) -> bool {
+        self.keys
+            .get(key as usize)
+            .expect("key should be between 0 and 15")
+            .to_owned()
+    }
+
+    pub fn key_down(&mut self, key: u8) {
+        let key = self
+            .keys
+            .get_mut(key as usize)
+            .expect("key should be between 0 and 15");
+
+        *key = true;
+    }
+
+    pub fn key_up(&mut self, key: u8) {
+        let key = self
+            .keys
+            .get_mut(key as usize)
+            .expect("key should be between 0 and 15");
+
+        *key = false;
+    }
+}
+```
+
+`get`, `get_mut`, and `expect` handle the bounds check cleanly. `clear` resets
+all keys, which is useful when the emulator loses focus.
+
+## Completing the timer
+
+The `Timer` struct from part 1 already had `decrement`. We need two more
+methods: `get` for the keypad and timer opcodes to read the current value, and
+`set` to write it:
+
+```rust title="timer.rs"
+impl Timer {
+    pub fn get(&self) -> u8 {
+        self.value
+    }
+
+    pub fn set(&mut self, value: u8) {
+        self.value = value;
+    }
+}
+```
+
+## Exposing state to the frontend
+
+The frontend needs to read keypad state directly and know whether to play a
+tone. We expose `keypad` as a public field and add `is_sound_playing`:
+
+```rust {5} title="emulator.rs"
+pub struct Emulator {
+    registers: [u8; 16],
+    index: u16,
+    program_counter: u16,
+    pub keypad: Keypad,
+    pub display: Display,
+    // ...
+}
+```
+
+```rust {4-6} title="emulator.rs"
+impl Emulator {
+    // ... other code ...
+
+    pub fn is_sound_playing(&self) -> bool {
+        self.sound_timer.get() > 0
+    }
+}
+```
+
+When the sound timer is above zero, audio should play. The frontend will poll
+`is_sound_playing` each tick and start or stop the oscillator accordingly.
+
+## Keypad opcodes
+
+### Ex9E - SKP Vx and ExA1 - SKNP Vx
+
+Skip the next instruction if the key in Vx is pressed (`SKP`) or not pressed
+(`SKNP`). These mirror `3xkk`/`4xkk`, but query keypad state instead of a
+constant:
+
+```rust {6-23} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xE, _, 0x9, 0xE) => {
+            // Ex9E - SKP Vx
+            let key_pressed = self
+                .keypad
+                .get_key(self.registers[instruction.x() as usize]);
+            if key_pressed {
+                self.program_counter += 2;
+            }
+        }
+        Instruction(0xE, _, 0xA, 0x1) => {
+            // ExA1 - SKNP Vx
+            let key_pressed = self
+                .keypad
+                .get_key(self.registers[instruction.x() as usize]);
+            if !key_pressed {
+                self.program_counter += 2;
+            }
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-18} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_skp_vx() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.program_counter = 0x200;
+        emulator.registers[0x1] = 0x02;
+        emulator.keypad.key_down(0x02);
+
+        emulator.execute_instruction(Instruction::from_opcode(0xE19E));
+        assert_eq!(emulator.program_counter, 0x204, "skipped: key pressed");
+
+        emulator.keypad.key_up(0x02);
+        emulator.execute_instruction(Instruction::from_opcode(0xE19E));
+        assert_eq!(emulator.program_counter, 0x206, "not skipped: key not pressed");
+    }
+}
+```
+
+### Fx0A - LD Vx, K
+
+Wait for any key to be pressed, then store its index in Vx. This is the only
+blocking opcode in Chip-8. We implement the wait by rewinding the program
+counter back by 2, undoing the advance at the top of `execute_instruction`, so
+the same instruction re-executes on the next cycle. When a key is found, we
+store it, undo the rewind, and return:
+
+```rust {6-17} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xF, _, 0x0, 0xA) => {
+            // Fx0A - LD Vx, K: wait for key press
+            self.program_counter -= 2;
+
+            for key in 0x0..=0xFu8 {
+                if self.keypad.get_key(key) {
+                    self.registers[instruction.x() as usize] = key;
+                    self.program_counter += 2;
+                    break;
+                }
+            }
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-21} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_vx_k() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.program_counter = 0x200;
+        emulator.registers[0x1] = 0x99;
+
+        // no key pressed: PC rewinds, Vx unchanged
+        emulator.execute_instruction(Instruction::from_opcode(0xF10A));
+        assert_eq!(emulator.program_counter, 0x200, "PC rewound");
+        assert_eq!(emulator.registers[0x1], 0x99, "Vx unchanged");
+
+        // key pressed: PC advances, Vx updated
+        emulator.keypad.key_down(0x08);
+        emulator.execute_instruction(Instruction::from_opcode(0xF10A));
+        assert_eq!(emulator.program_counter, 0x202, "PC advanced");
+        assert_eq!(emulator.registers[0x1], 0x08, "Vx updated with key");
+    }
+}
+```
+
+## Timer opcodes
+
+### Fx07 - LD Vx, DT
+
+Read the current delay timer value into Vx:
+
+```rust {6-9} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xF, _, 0x0, 0x7) => {
+            // Fx07 - LD Vx, DT
+            self.registers[instruction.x() as usize] = self.delay_timer.get();
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-12} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_vx_dt() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.delay_timer.set(0x42);
+
+        emulator.execute_instruction(Instruction::from_opcode(0xF107));
+        assert_eq!(emulator.registers[0x1], 0x42, "V1 loaded with delay timer");
+    }
+}
+```
+
+### Fx15 - LD DT, Vx and Fx18 - LD ST, Vx
+
+Set the delay timer and sound timer from a register:
+
+```rust {6-13} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xF, _, 0x1, 0x5) => {
+            // Fx15 - LD DT, Vx
+            self.delay_timer.set(self.registers[instruction.x() as usize]);
+        }
+        Instruction(0xF, _, 0x1, 0x8) => {
+            // Fx18 - LD ST, Vx
+            self.sound_timer.set(self.registers[instruction.x() as usize]);
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-13} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_st_vx() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.registers[0x5] = 0x42;
+
+        emulator.execute_instruction(Instruction::from_opcode(0xF518));
+        assert_eq!(emulator.sound_timer.get(), 0x42, "sound timer set");
+        assert!(emulator.is_sound_playing(), "sound is playing");
+    }
+}
+```
+
+## Wrapping up
+
+In this part, we completed the keypad and timer components and added all the
+opcodes that use them, including the blocking `Fx0A` key-wait using the PC
+rewind trick. The emulator can now fetch, decode, and execute every Chip-8
+instruction. The core library is complete.
+
+In the next part, [Build a Chip-8 Emulator in Rust - Part 7 - Desktop Frontend](./chip-8-emulator-in-rust-part-seven), we'll restructure the core
+into a library crate and build a desktop binary using winit, softbuffer, and cpal for rendering,
+keyboard input, and audio.

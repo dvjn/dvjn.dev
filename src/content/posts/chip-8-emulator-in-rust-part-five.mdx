@@ -1,0 +1,634 @@
+---
+title: Build a Chip-8 Emulator in Rust - Part 5 - Control Flow, Arithmetic & Memory
+description: "Part 5 of building a Chip-8 emulator in Rust: implementing the stack, then adding all remaining opcodes: subroutines, arithmetic, logic, random numbers, and memory operations."
+tags:
+    - rust
+    - chip-8
+    - emulator
+published_on: 14/03/2026
+---
+
+This is the fifth part of the series on building a Chip-8 emulator in Rust. In
+[part 4](./chip-8-emulator-in-rust-part-four), we implemented the display and
+added the two opcodes that use it. This part adds all the remaining opcodes:
+subroutines, arithmetic, bitwise operations, random numbers, and memory
+operations. After this, the emulator core is complete.
+
+We need one component first: the stack needs `push` and `pop`.
+
+## Implementing the stack
+
+The stack was defined in part 1 as a fixed array of 16 16-bit values with a
+stack pointer. We need two operations: push a return address before a call, pop
+it back on return.
+
+```rust {4-12} title="stack.rs"
+impl Stack {
+    // ... new() ...
+
+    pub fn push(&mut self, value: u16) {
+        self.values[self.pointer] = value;
+        self.pointer += 1;
+    }
+
+    pub fn pop(&mut self) -> u16 {
+        self.pointer -= 1;
+        self.values[self.pointer]
+    }
+}
+```
+
+`push` stores the value at the current pointer position then advances it. `pop`
+decrements first, then reads, so the pointer always points to the next free
+slot.
+
+## Control flow
+
+### 0nnn - SYS addr
+
+The `0nnn` opcode was used on original Chip-8 hardware to call machine code
+routines. Modern emulators ignore it. We need a catch-all arm for opcode `0x0`
+that doesn't match `00E0` (CLS) or `00EE` (RET), so it falls through silently:
+
+```rust {6-8} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x0, _, _, _) => {
+            // 0nnn - SYS addr (ignored)
+        }
+        _ => {}
+    }
+}
+```
+
+### 2nnn - CALL addr and 00EE - RET
+
+`CALL` pushes the current program counter (already past the call instruction)
+onto the stack, then jumps to `nnn`. `RET` pops it back. Together they
+implement subroutines:
+
+```rust {6-14} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x0, 0x0, 0xE, 0xE) => {
+            // 00EE - RET
+            self.program_counter = self.stack.pop();
+        }
+        Instruction(0x2, _, _, _) => {
+            // 2nnn - CALL addr
+            self.stack.push(self.program_counter);
+            self.program_counter = instruction.nnn();
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-15} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_call_and_ret() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.program_counter = 0x200;
+
+        emulator.execute_instruction(Instruction::from_opcode(0x2ABC));
+        assert_eq!(emulator.program_counter, 0x0ABC, "called to address");
+
+        emulator.execute_instruction(Instruction::from_opcode(0x00EE));
+        assert_eq!(emulator.program_counter, 0x202, "returned to caller");
+    }
+}
+```
+
+### Bnnn - JP V0, addr
+
+Jump to `nnn + V0`. Programs load an offset into V0 and then jump to a dispatch
+table. We use `wrapping_add` in case the sum overflows 16 bits:
+
+```rust {6-10} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xB, _, _, _) => {
+            // Bnnn - JP V0, addr
+            self.program_counter =
+                instruction.nnn().wrapping_add(self.registers[0x0] as u16);
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-12} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_jp_v0_addr() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.registers[0x0] = 0x10;
+
+        emulator.execute_instruction(Instruction::from_opcode(0xB100));
+        assert_eq!(emulator.program_counter, 0x110, "jumped to V0 + nnn");
+    }
+}
+```
+
+## Arithmetic and logic
+
+The `8xy_` family packs eight operations into one opcode group, differentiated
+by the last nibble.
+
+### 7xkk - ADD Vx, byte
+
+Add a constant to Vx. This one never sets `VF` on overflow, so it just wraps:
+
+```rust {6-10} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x7, _, _, _) => {
+            // 7xkk - ADD Vx, byte
+            self.registers[instruction.x() as usize] =
+                self.registers[instruction.x() as usize].wrapping_add(instruction.kk());
+        }
+        _ => {}
+    }
+}
+```
+
+### 8xy0 - LD Vx, Vy
+
+Copy the value of Vy into Vx:
+
+```rust {6-10} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x8, _, _, 0x0) => {
+            // 8xy0 - LD Vx, Vy
+            self.registers[instruction.x() as usize] =
+                self.registers[instruction.y() as usize];
+        }
+        _ => {}
+    }
+}
+```
+
+### 8xy1 - OR, 8xy2 - AND, 8xy3 - XOR
+
+Bitwise operations on two registers, result stored in Vx:
+
+```rust {6-23} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x8, _, _, 0x1) => {
+            // 8xy1 - OR Vx, Vy
+            self.registers[instruction.x() as usize] =
+                self.registers[instruction.x() as usize]
+                    | self.registers[instruction.y() as usize];
+        }
+        Instruction(0x8, _, _, 0x2) => {
+            // 8xy2 - AND Vx, Vy
+            self.registers[instruction.x() as usize] =
+                self.registers[instruction.x() as usize]
+                    & self.registers[instruction.y() as usize];
+        }
+        Instruction(0x8, _, _, 0x3) => {
+            // 8xy3 - XOR Vx, Vy
+            self.registers[instruction.x() as usize] =
+                self.registers[instruction.x() as usize]
+                    ^ self.registers[instruction.y() as usize];
+        }
+        _ => {}
+    }
+}
+```
+
+### 8xy4 - ADD Vx, Vy
+
+Addition with carry. `VF` is set to 1 if the result overflowed a `u8`, 0
+otherwise. Rust's `overflowing_add` gives both the wrapped result and the
+overflow flag in one call:
+
+```rust {6-13} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x8, _, _, 0x4) => {
+            // 8xy4 - ADD Vx, Vy
+            let (vx, overflow) = self.registers[instruction.x() as usize]
+                .overflowing_add(self.registers[instruction.y() as usize]);
+
+            self.registers[instruction.x() as usize] = vx;
+            self.registers[0xF] = if overflow { 0x1 } else { 0x0 };
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-18} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_add_vx_vy() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.registers[0x1] = 10;
+        emulator.registers[0x2] = 100;
+        emulator.registers[0x3] = 250;
+
+        emulator.execute_instruction(Instruction::from_opcode(0x8124));
+        assert_eq!(emulator.registers[0x1], 110, "no overflow");
+        assert_eq!(emulator.registers[0xF], 0, "no carry");
+
+        emulator.execute_instruction(Instruction::from_opcode(0x8134));
+        assert_eq!(emulator.registers[0xF], 1, "carry set on overflow");
+    }
+}
+```
+
+### 8xy5 - SUB Vx, Vy and 8xy7 - SUBN Vx, Vy
+
+`SUB` computes `Vx - Vy`. `VF` is set to 1 if there was no borrow (result ≥ 0),
+0 if there was. This is the inverse of `overflowing_sub`'s overflow flag:
+
+```rust {6-13} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x8, _, _, 0x5) => {
+            // 8xy5 - SUB Vx, Vy
+            let (vx, overflow) = self.registers[instruction.x() as usize]
+                .overflowing_sub(self.registers[instruction.y() as usize]);
+
+            self.registers[instruction.x() as usize] = vx;
+            self.registers[0xF] = if overflow { 0x0 } else { 0x1 };
+        }
+        _ => {}
+    }
+}
+```
+
+`SUBN` computes `Vy - Vx` instead, with the same borrow flag logic:
+
+```rust {6-13} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x8, _, _, 0x7) => {
+            // 8xy7 - SUBN Vx, Vy
+            let (vx, overflow) = self.registers[instruction.y() as usize]
+                .overflowing_sub(self.registers[instruction.x() as usize]);
+
+            self.registers[instruction.x() as usize] = vx;
+            self.registers[0xF] = if overflow { 0x0 } else { 0x1 };
+        }
+        _ => {}
+    }
+}
+```
+
+### 8xy6 - SHR Vx and 8xyE - SHL Vx
+
+Shift right by 1 and shift left by 1. `VF` gets the bit that was shifted out:
+the LSB for right shifts, indicated by overflow for left shifts:
+
+```rust {6-21} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0x8, _, _, 0x6) => {
+            // 8xy6 - SHR Vx {, Vy}
+            let vx = self.registers[instruction.x() as usize];
+            let (vx, overflow) = (vx / 2, vx % 2);
+
+            self.registers[instruction.x() as usize] = vx;
+            self.registers[0xF] = overflow;
+        }
+        Instruction(0x8, _, _, 0xE) => {
+            // 8xyE - SHL Vx {, Vy}
+            let (vx, overflow) =
+                self.registers[instruction.x() as usize].overflowing_mul(2);
+
+            self.registers[instruction.x() as usize] = vx;
+            self.registers[0xF] = if overflow { 0x1 } else { 0x0 };
+        }
+        _ => {}
+    }
+}
+```
+
+For `SHR`, dividing by 2 and taking the remainder gives the quotient and the
+shifted-out LSB without any bit masks.
+
+## Random
+
+### Cxkk - RND Vx, byte
+
+Generate a random byte, AND it with `kk`, store in Vx. The mask lets programs
+constrain the range. `kk = 0x0F` limits the result to 0-15.
+
+Add `rand = "0.8.5"` to `Cargo.toml`:
+
+```toml {3} title="Cargo.toml"
+[dependencies]
+rand = "0.8.5"
+```
+
+```rust {1,9-13} title="emulator.rs"
+use rand::Rng;
+
+impl Emulator {
+    fn execute_instruction(&mut self, instruction: Instruction) {
+        self.program_counter += 2;
+
+        match instruction {
+            // ...
+            Instruction(0xC, _, _, _) => {
+                // Cxkk - RND Vx, byte
+                self.registers[instruction.x() as usize] =
+                    rand::thread_rng().gen::<u8>() & instruction.kk();
+            }
+            _ => {}
+        }
+    }
+}
+```
+
+```rust {5-11} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_rnd_vx_byte() {
+        let mut emulator = Emulator::new(&[]);
+
+        emulator.execute_instruction(Instruction::from_opcode(0xC10F));
+        assert_eq!(emulator.registers[0x1] >> 4, 0, "upper nibble masked to 0");
+    }
+}
+```
+
+## Memory opcodes
+
+### Extending the memory module
+
+The current `Memory` struct only exposes `as_slice`, which is enough for `DRW`.
+The memory opcodes need to write individual bytes and read or write slices at
+specific addresses. Let's add three helpers:
+
+```rust {4-14} title="memory.rs"
+impl Memory {
+    // ... new(), as_slice() ...
+
+    pub fn read_slice(&self, start: usize, end: usize) -> &[u8] {
+        &self.storage[start..end]
+    }
+
+    pub fn write_byte(&mut self, addr: usize, value: u8) {
+        self.storage[addr] = value;
+    }
+
+    pub fn write_slice(&mut self, start: usize, data: &[u8]) {
+        self.storage[start..start + data.len()].copy_from_slice(data);
+    }
+}
+```
+
+`read_slice` returns a borrowed slice without copying. `write_byte` and
+`write_slice` write directly into the backing array.
+
+### Fx1E - ADD I, Vx
+
+Add Vx to the index register. Uses `wrapping_add` to handle the full 16-bit
+address space:
+
+```rust {6-11} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xF, _, 0x1, 0xE) => {
+            // Fx1E - ADD I, Vx
+            self.index = self
+                .index
+                .wrapping_add(self.registers[instruction.x() as usize] as u16);
+        }
+        _ => {}
+    }
+}
+```
+
+```rust {5-18} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_add_i_vx() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.registers[0x3] = 0x34;
+        emulator.index = 0x1200;
+
+        emulator.execute_instruction(Instruction::from_opcode(0xF31E));
+        assert_eq!(emulator.index, 0x1234, "I updated with sum");
+
+        emulator.registers[0x5] = 0x02;
+        emulator.index = 0xFFFF;
+        emulator.execute_instruction(Instruction::from_opcode(0xF51E));
+        assert_eq!(emulator.index, 0x0001, "I wraps on overflow");
+    }
+}
+```
+
+### Fx29 - LD F, Vx
+
+Point `I` at the font sprite for the hex digit in Vx. The font sprites live at
+address `0x000`, five bytes each, so digit `d` starts at `d * 5`:
+
+```rust {6-9} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+            Instruction(0xF, _, 0x2, 0x9) => {
+                // Fx29 - LD F, Vx: point I at font sprite for digit Vx
+                self.index = self.registers[instruction.x() as usize] as u16 * 5;
+            }
+        _ => {}
+    }
+}
+```
+
+We can verify this by checking that `I` lands on the correct bytes. The font
+sprite for `3` is `0xF0, 0x10, 0xF0, 0x10, 0xF0`:
+
+```rust {5-20} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_f_vx() {
+        let mut emulator = Emulator::new(&[]);
+
+        // digit '3' font sprite starts at 0x03 * 5 = 15
+        emulator.registers[0x5] = 0x03;
+        emulator.execute_instruction(Instruction::from_opcode(0xF529));
+
+        assert_eq!(emulator.index, 15, "I points to font sprite for 3");
+        // '3' sprite: F0 10 F0 10 F0
+        assert_eq!(emulator.memory.as_slice()[15], 0xF0, "byte 0");
+        assert_eq!(emulator.memory.as_slice()[16], 0x10, "byte 1");
+        assert_eq!(emulator.memory.as_slice()[17], 0xF0, "byte 2");
+        assert_eq!(emulator.memory.as_slice()[18], 0x10, "byte 3");
+        assert_eq!(emulator.memory.as_slice()[19], 0xF0, "byte 4");
+    }
+}
+```
+
+### Fx33 - LD B, Vx
+
+Store the binary-coded decimal (BCD) representation of Vx at addresses `I`,
+`I+1`, and `I+2`. BCD breaks a value like `234` into its individual decimal
+digits: `2`, `3`, `4`. Chip-8 programs use this to display score counters
+without needing a division routine.
+
+```rust {6-14} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+            Instruction(0xF, _, 0x3, 0x3) => {
+                // Fx33 - LD B, Vx: store BCD of Vx at I, I+1, I+2
+                let vx = self.registers[instruction.x() as usize];
+                let i = self.index as usize;
+
+            self.memory.write_byte(i,     vx.div_euclid(100).rem_euclid(10));
+            self.memory.write_byte(i + 1, vx.div_euclid(10).rem_euclid(10));
+            self.memory.write_byte(i + 2, vx.rem_euclid(10));
+        }
+        _ => {}
+    }
+}
+```
+
+`div_euclid(100)` gives the hundreds digit. `div_euclid(10).rem_euclid(10)`
+gives the tens. `rem_euclid(10)` gives the ones. `rem_euclid` is always
+non-negative, though it doesn't matter for a `u8`.
+
+```rust {5-13} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_b_vx() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.index = 0x300;
+        emulator.registers[0x2] = 234;
+
+        emulator.execute_instruction(Instruction::from_opcode(0xF233));
+        assert_eq!(emulator.memory.read_slice(0x300, 0x303), &[2, 3, 4], "BCD of 234");
+    }
+}
+```
+
+### Fx55 - LD [I], Vx and Fx65 - LD Vx, [I]
+
+Store registers V0 through Vx into memory starting at `I`, then load them back
+with the reverse opcode:
+
+```rust {6-20} title="emulator.rs"
+fn execute_instruction(&mut self, instruction: Instruction) {
+    self.program_counter += 2;
+
+    match instruction {
+        // ...
+        Instruction(0xF, _, 0x5, 0x5) => {
+            // Fx55 - LD [I], Vx: store V0..Vx in memory starting at I
+            let x = instruction.x() as usize;
+            let i = self.index as usize;
+
+            self.memory.write_slice(i, &self.registers[0..=x].to_vec());
+        }
+        Instruction(0xF, _, 0x6, 0x5) => {
+            // Fx65 - LD Vx, [I]: load V0..Vx from memory starting at I
+            let x = instruction.x() as usize;
+            let i = self.index as usize;
+
+            let data = self.memory.read_slice(i, i + x + 1).to_vec();
+            self.registers[0..=x].copy_from_slice(&data);
+        }
+        _ => {}
+    }
+}
+```
+
+The inclusive range `0..=x` covers V0 through Vx. We call `.to_vec()` before
+the mutable borrow on `self.memory` to detach the shared borrow on
+`self.registers`.
+
+```rust {5-16} title="emulator.rs"
+#[cfg(test)]
+mod tests {
+    // ...
+
+    #[test]
+    fn opcode_ld_i_vx() {
+        let mut emulator = Emulator::new(&[]);
+        emulator.registers[0x0] = 5;
+        emulator.registers[0x1] = 4;
+        emulator.registers[0x2] = 3;
+        emulator.index = 0x300;
+
+        emulator.execute_instruction(Instruction::from_opcode(0xF255));
+        assert_eq!(emulator.memory.read_slice(0x300, 0x303), &[5, 4, 3], "V0..V2 stored");
+        assert_eq!(emulator.memory.as_slice()[0x303], 0, "V3 not stored");
+    }
+}
+```
+
+## Wrapping up
+
+In this part, we implemented the stack and added all control flow, arithmetic,
+logic, random, and memory opcodes. The only remaining instructions are the
+keypad and timer operations, which need their hardware components first.
+
+In the next part, [Build a Chip-8 Emulator in Rust - Part 6 - Keypad &
+Timers](./chip-8-emulator-in-rust-part-six), we'll complete those components
+and add the final opcodes. The emulator core will then be complete.

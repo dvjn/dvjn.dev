@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://dvjn.dev/sitemap-index.xml

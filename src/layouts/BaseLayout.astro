@@ -5,10 +5,11 @@ import { Icon } from "astro-icon/components";
 interface Props {
     title: string;
     activePage?: "home" | "blog";
+    description?: string;
     hideHeader?: boolean;
 }
 
-const { title, activePage, hideHeader } = Astro.props;
+const { title, description, activePage, hideHeader } = Astro.props;
 ---
 
 <!doctype html>
@@ -19,6 +20,7 @@ const { title, activePage, hideHeader } = Astro.props;
         <meta name="darkreader-lock" />
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <title>{title}</title>
+        {description && <meta name="description" content={description} />}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link

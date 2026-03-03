@@ -15,7 +15,7 @@ const posts = (await getCollection("posts"))
     );
 ---
 
-<BaseLayout title="Blog — Divya Jain" activePage="blog">
+<BaseLayout title="Blog — Divya Jain" description="Writing about things I've built, broken, or figured out — Rust, Go, emulators, DevOps, and more." activePage="blog">
     <Header label={`${posts.length} Posts`} title="Blog">
         <Fragment slot="subtitle">Writing about things I've built, broken, or figured out.</Fragment>
     </Header>

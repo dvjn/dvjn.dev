@@ -24,7 +24,7 @@ const { Content, remarkPluginFrontmatter } = await render();
 const publishedOn = date.format(date.parse(data.published_on, "dd/MM/yyyy", new Date()), "MMM yyyy");
 ---
 
-<BaseLayout title={`${data.title} — Divya Jain`} activePage="blog">
+<BaseLayout title={`${data.title} — Divya Jain`} description={data.description} activePage="blog">
     <article>
         <header>
             {

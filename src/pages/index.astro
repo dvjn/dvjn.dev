@@ -1,8 +1,8 @@
 ---
 import { getCollection } from "astro:content";
+import BaseLayout from "@layouts/BaseLayout.astro";
 import NameBox from "@components/NameBox.astro";
 import PostItem from "@components/PostItem.astro";
-import BaseLayout from "@layouts/BaseLayout.astro";
 import { Icon } from "astro-icon/components";
 import { differenceInMilliseconds, parse } from "date-fns";
 
@@ -16,7 +16,7 @@ const posts = (await getCollection("posts"))
     );
 ---
 
-<BaseLayout title="Divya Jain" activePage="home" hideHeader>
+<BaseLayout title="Divya Jain" description="DevOps engineer and systems tinkerer. Writing about Rust, Go, emulators, agentic AI, and whatever I'm building next." activePage="home" hideHeader>
     <div>
         <div>
             <NameBox size="xl" />

@@ -1,56 +1,49 @@
 ---
-import { type CollectionEntry, getCollection } from "astro:content";
 import CaptionedImage from "@components/CaptionedImage.astro";
 import Chip from "@components/Chip.astro";
 import Prose from "@components/Prose.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
-import * as date from "date-fns";
+import { getPosts, type Post } from "@utils/posts";
 
 export async function getStaticPaths() {
-    const postEntries = await getCollection("posts");
-    return postEntries
-        .filter((post) => post.data.draft !== true)
-        .map((entry) => ({
-            params: { slug: entry.slug },
-            props: { ...entry },
-        }));
+    const posts = await getPosts();
+    return posts.map((post) => ({
+        params: { slug: post.slug },
+        props: { post },
+    }));
 }
 
-export type Props = CollectionEntry<"posts">;
+export type Props = {
+    post: Post;
+};
 
-const { render, data } = Astro.props;
-const { Content, remarkPluginFrontmatter } = await render();
-
-const publishedOn = date.format(date.parse(data.published_on, "dd/MM/yyyy", new Date()), "MMM yyyy");
+const { post } = Astro.props as Props;
+const { Content, title, description, tags, publishedOn, minutesRead, cover, coverCaption } = post;
 ---
 
-<BaseLayout title={`${data.title} — Divya Jain`} description={data.description} activePage="blog">
+<BaseLayout title={`${title} — Divya Jain`} description={description} activePage="blog">
     <article>
         <header>
             {
-                data.tags && data.tags.length > 0 && (
+                tags && tags.length > 0 && (
                     <div class="post-tags">
-                        {data.tags.map((tag: string) => (
+                        {tags.map((tag: string) => (
                             <Chip label={tag} />
                         ))}
                     </div>
                 )
             }
-            <h1>{data.title}</h1>
+            <h1>{title}</h1>
             <div>
                 <span>{publishedOn}</span>
-                {remarkPluginFrontmatter.minutesRead && <span>{remarkPluginFrontmatter.minutesRead}</span>}
+                {minutesRead && <span>{minutesRead}</span>}
             </div>
         </header>
 
         {
-            data.cover && (
+            cover && (
                 <div class="post-cover">
-                    <CaptionedImage
-                        src={data.cover}
-                        alt={data.cover_caption ?? data.title}
-                        caption={data.cover_caption}
-                    />
+                    <CaptionedImage src={cover} alt={coverCaption ?? title} caption={coverCaption} />
                 </div>
             )
         }

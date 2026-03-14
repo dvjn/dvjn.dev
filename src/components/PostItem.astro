@@ -1,21 +1,16 @@
 ---
-import type { CollectionEntry } from "astro:content";
+import { type Post } from "@utils/posts";
 import Chip from "@components/Chip.astro";
-import { format, parse } from "date-fns";
 
 interface Props {
-    post: CollectionEntry<"posts">;
+    post: Post;
 }
 
 const { post } = Astro.props;
-const { remarkPluginFrontmatter } = await post.render();
-const minutesRead = remarkPluginFrontmatter.minutesRead as string | undefined;
-const { title, tags, published_on } = post.data;
-const url = `/blog/${post.slug}`;
-const date = format(parse(published_on, "dd/MM/yyyy", new Date()), "MMM yyyy");
+const { title, tags, publishedOn, minutesRead, slug } = post;
 ---
 
-<a href={url}>
+<a href={`/blog/${slug}`}>
     <div>
         <strong>{title}</strong>
         {
@@ -30,7 +25,7 @@ const date = format(parse(published_on, "dd/MM/yyyy", new Date()), "MMM yyyy");
     </div>
     <div>
         {minutesRead && <small>{minutesRead}</small>}
-        <time>{date}</time>
+        <time>{publishedOn}</time>
     </div>
 </a>
 

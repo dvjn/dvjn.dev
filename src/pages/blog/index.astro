@@ -1,18 +1,10 @@
 ---
-import { getCollection } from "astro:content";
 import Header from "@components/Header.astro";
 import PostItem from "@components/PostItem.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
-import { differenceInMilliseconds, parse } from "date-fns";
+import { getPosts } from "@utils/posts";
 
-const posts = (await getCollection("posts"))
-    .filter((post) => post.data.draft !== true)
-    .sort((a, b) =>
-        differenceInMilliseconds(
-            parse(b.data.published_on, "dd/MM/yyyy", new Date()),
-            parse(a.data.published_on, "dd/MM/yyyy", new Date()),
-        ),
-    );
+const posts = await getPosts();
 ---
 
 <BaseLayout
